@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encuestas de Salud Mental - C.M.F. Ermita</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-tabaco: #f59e0b;
+            --accent-alcohol: #ef4444;
+            --accent-adicciones: #10b981;
+            --accent-admin: #3b82f6;
+            --accent-month: #a855f7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            overflow-x: hidden;
+            padding: 0 20px 40px 20px;
+        }
+
+        /* Barra de Navegación Superior */
+        .navbar {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--card-border);
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-btn:hover {
+            background: var(--text-main);
+            color: #0f172a;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(255,255,255,0.05);
+        }
+
+        /* Encabezados */
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        header h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #6366f1, #a855f7, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        header h2 {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            letter-spacing: 2px;
+        }
+
+        /* Contenedores de Paneles de Contadores */
+        .community-counter-box {
+            width: 100%;
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 20px 35px;
+            margin-bottom: 20px;
+            text-align: center;
+            backdrop-filter: blur(5px);
+            animation: fadeInDown 0.9s ease-out;
+        }
+
+        .community-counter-box h3 {
+            font-size: 1.25rem;
+            color: var(--text-main);
+            margin-bottom: 15px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            background: linear-gradient(to right, #f8fafc, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Variación de título para el contenedor del mes */
+        .community-counter-box.month-box h3 {
+            background: linear-gradient(to right, #e9d5ff, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .counter-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .counter-item {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 14px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .counter-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            transform: scale(1.03);
+        }
+
+        .counter-number {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .counter-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Estilos específicos de iluminación para contadores globales */
+        .count-tabaco { color: var(--accent-tabaco); text-shadow: 0 0 10px rgba(245, 158, 11, 0.3); }
+        .count-alcohol { color: var(--accent-alcohol); text-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
+        .count-adicciones { color: var(--accent-adicciones); text-shadow: 0 0 10px rgba(16, 185, 129, 0.3); }
+
+        /* Estilos específicos de iluminación para contadores mensuales */
+        .count-tabaco-m { color: #fcd34d; text-shadow: 0 0 10px rgba(252, 211, 77, 0.3); }
+        .count-alcohol-m { color: #fca5a5; text-shadow: 0 0 10px rgba(252, 165, 165, 0.3); }
+        .count-adicciones-m { color: #6ee7b7; text-shadow: 0 0 10px rgba(110, 231, 183, 0.3); }
+
+        /* Contenedor Principal / Menú */
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-top: 20px;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        /* Tarjetas de Opciones */
+        .menu-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 40px 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-tabaco:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(245, 158, 11, 0.15); border-color: var(--accent-tabaco); }
+        .card-alcohol:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(239, 68, 68, 0.15); border-color: var(--accent-alcohol); }
+        .card-adicciones:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(16, 185, 129, 0.15); border-color: var(--accent-adicciones); }
+
+        .icon-wrapper {
+            width: 90px;
+            height: 90px;
+            margin: 0 auto 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            transition: transform 0.5s ease;
+        }
+
+        .card-tabaco .icon-wrapper { background: rgba(245, 158, 11, 0.1); color: var(--accent-tabaco); }
+        .card-alcohol .icon-wrapper { background: rgba(239, 68, 68, 0.1); color: var(--accent-alcohol); }
+        .card-adicciones .icon-wrapper { background: rgba(16, 185, 129, 0.1); color: var(--accent-adicciones); }
+
+        .menu-card:hover .icon-wrapper { transform: scale(1.15) rotate(5deg); }
+        .menu-card h3 { font-size: 1.6rem; margin-bottom: 12px; font-weight: 600; }
+        .menu-card p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; }
+
+        /* Secciones Dinámicas (Ocultas por defecto) */
+        .dynamic-section {
+            display: none;
+            width: 100%;
+            max-width: 750px;
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 40px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: scaleUp 0.4s ease-out;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 15px;
+        }
+
+        .btn-back {
+            background: transparent;
+            border: 1px solid var(--text-muted);
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-back:hover { background: var(--text-main); color: #0f172a; border-color: var(--text-main); }
+
+        /* Formularios Estilizados */
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; }
+        .form-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--card-border);
+            padding: 14px 20px;
+            border-radius: 12px;
+            color: var(--text-main);
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        .form-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); }
+
+        .btn-submit {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s, transform 0.2s;
+        }
+        .btn-submit:hover { background: var(--primary-hover); transform: translateY(-1px); }
+
+        /* Tablas de datos Modernas */
+        .table-container { overflow-x: auto; margin-top: 25px; border-radius: 12px; border: 1px solid var(--card-border); }
+        table { width: 100%; border-collapse: collapse; text-align: left; background: rgba(0,0,0,0.1); }
+        th, td { padding: 16px 20px; border-bottom: 1px solid var(--card-border); }
+        th { background: rgba(255,255,255,0.02); color: var(--text-muted); font-weight: 600; }
+        tr:last-child td { border-bottom: none; }
+
+        /* Estilos del Test */
+        .progress-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-bottom: 30px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; transition: width 0.3s ease; }
+        .question-box h3 { font-size: 1.35rem; margin-bottom: 25px; line-height: 1.4; }
+        
+        .option-btn {
+            display: block;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            padding: 16px 24px;
+            border-radius: 14px;
+            text-align: left;
+            color: var(--text-main);
+            font-size: 1rem;
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+        .option-btn:hover { background: rgba(255, 255, 255, 0.15); transform: translateX(5px); border-color: rgba(255,255,255,0.3); }
+        .result-box { text-align: center; padding: 20px 0; }
+        .result-box i { font-size: 4rem; margin-bottom: 20px; }
+
+        /* Alertas Personalizadas */
+        .empty-message { text-align: center; color: var(--text-muted); padding: 30px; font-style: italic; }
+
+        /* Animaciones */
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scaleUp { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+
+        @media (max-width: 600px) {
+            .counter-grid { grid-template-columns: 1fr; gap: 10px; }
+            .community-counter-box { padding: 20px 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <button class="nav-btn" onclick="accessAdmin()"><i class="fa-solid fa-user-shield"></i> Administrador</button>
+        <button class="nav-btn" onclick="accessResponses()"><i class="fa-solid fa-database"></i> Respuestas</button>
+    </nav>
+
+    <header id="main-header">
+        <h1>Encuestas de Salud Mental</h1>
+        <h2>C.M.F. Ermita</h2>
+    </header>
+
+    <div class="community-counter-box" id="community-panel-global">
+        <h3>Comunidad de Derechohabientes Encuestados</h3>
+        <div class="counter-grid">
+            <div class="counter-item">
+                <span class="counter-number count-tabaco" id="count-tabaco-val">0</span>
+                <span class="counter-label">Tabaquismo</span>
+            </div>
+            <div class="counter-item">
+                <span class="counter-number count-alcohol" id="count-alcohol-val">0</span>
+                <span class="counter-label">Alcoholismo</span>
+            </div>
+            <div class="counter-item">
+                <span class="counter-number count-adicciones" id="count-adicciones-val">0</span>
+                <span class="counter-label">Adicciones</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="community-counter-box month-box" id="community-panel-month">
+        <h3>Comunidad de Derechohabientes Encuestados en el Mes</h3>
+        <div class="counter-grid">
+            <div class="counter-item">
+                <span class="counter-number count-tabaco-m" id="count-tabaco-month-val">0</span>
+                <span class="counter-label">Tabaquismo (Mes)</span>
+            </div>
+            <div class="counter-item">
+                <span class="counter-number count-alcohol-m" id="count-alcohol-month-val">0</span>
+                <span class="counter-label">Alcoholismo (Mes)</span>
+            </div>
+            <div class="counter-item">
+                <span class="counter-number count-adicciones-m" id="count-adicciones-month-val">0</span>
+                <span class="counter-label">Adicciones (Mes)</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="menu-container">
+        <div class="menu-card card-tabaco" onclick="startTest('tabaquismo')">
+            <div class="icon-wrapper"><i class="fa-solid fa-smoking"></i></div>
+            <h3>Tabaquismo</h3>
+            <p>Evalúa el nivel de dependencia al tabaco y los hábitos diarios de consumo.</p>
+        </div>
+
+        <div class="menu-card card-alcohol" onclick="startTest('alcoholismo')">
+            <div class="icon-wrapper"><i class="fa-solid fa-wine-glass-empty"></i></div>
+            <h3>Alcoholismo</h3>
+            <p>Identifica patrones de consumo de riesgo y su impacto en tu bienestar.</p>
+        </div>
+
+        <div class="menu-card card-adicciones" onclick="startTest('adicciones')">
+            <div class="icon-wrapper"><i class="fa-solid fa-brain"></i></div>
+            <h3>Adicciones</h3>
+            <p>Analiza conductas de riesgo relacionadas con sustancias u otras dependencias.</p>
+        </div>
+    </div>
+
+    <div class="dynamic-section" id="test-window">
+        <div class="section-header">
+            <h2 id="test-title">Test</h2>
+            <button class="btn-back" onclick="goHome()"><i class="fa-solid fa-arrow-left"></i> Volver</button>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-bar-fill"></div></div>
+        <div id="test-content"></div>
+    </div>
+
+    <div class="dynamic-section" id="admin-window">
+        <div class="section-header">
+            <h2><i class="fa-solid fa-user-gear" style="color: var(--accent-admin)"></i> Panel de Administración</h2>
+            <button class="btn-back" onclick="goHome()"><i class="fa-solid fa-xmark"></i> Salir</button>
+        </div>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">Personas Autorizadas para Realizar Encuestas y Ver Respuestas de Salud Mental</p>
+        
+        <form id="admin-form" onsubmit="saveAuthorizedPerson(event)">
+            <div class="form-group">
+                <label for="auth-rfc">RFC de la Persona</label>
+                <input type="text" id="auth-rfc" class="form-input" placeholder="Ej. ABCD123456XYZ" required style="text-transform: uppercase;">
+            </div>
+            <div class="form-group">
+                <label for="auth-name">Nombre Completo</label>
+                <input type="text" id="auth-name" class="form-input" placeholder="Ej. Dr. Armando Casas" required>
+            </div>
+            <button type="submit" class="btn-submit"><i class="fa-solid fa-user-plus"></i> Registrar Persona Autorizada</button>
+        </form>
+
+        <h3 style="margin-top: 35px; margin-bottom: 15px;">Personal Registrado</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>RFC / Contraseña</th>
+                        <th>Nombre Completo</th>
+                    </tr>
+                </thead>
+                <tbody id="authorized-table-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="dynamic-section" id="responses-window">
+        <div class="section-header">
+            <h2><i class="fa-solid fa-chart-pie" style="color: var(--accent-adicciones)"></i> Historial de Encuestas</h2>
+            <button class="btn-back" onclick="goHome()"><i class="fa-solid fa-xmark"></i> Volver</button>
+        </div>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">Registro confidencial de resultados recolectados en C.M.F. Ermita.</p>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha y Hora</th>
+                        <th>Encuesta</th>
+                        <th>Resultado/Nivel</th>
+                    </tr>
+                </thead>
+                <tbody id="responses-table-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Inicializar bases de datos locales y ejecutar contadores al cargar la ventana
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!localStorage.getItem('authorizedPersons')) {
+                localStorage.setItem('authorizedPersons', JSON.stringify([]));
+            }
+            if (!localStorage.getItem('surveyResponses')) {
+                localStorage.setItem('surveyResponses', JSON.stringify([]));
+            }
+            updateAllCounters();
+        });
+
+        const ADMIN_PASSWORD = "ViperMístico";
+
+        const testsData = {
+            tabaquismo: {
+                title: "Test de Tabaquismo",
+                color: "var(--accent-tabaco)",
+                questions: [
+                    { q: "¿Cuánto tiempo pasa desde que se despierta hasta que fuma el primer cigarrillo?", options: ["Menos de 5 minutos", "De 6 a 30 minutos", "Más de 30 minutos"] },
+                    { q: "¿Le resulta difícil no fumar en lugares donde está prohibido?", options: ["Sí, mucho", "A veces", "No, para nada"] },
+                    { q: "¿Cuántos cigarrillos fuma al día?", options: ["Más de 20 cigarrillos", "Entre 11 y 20", "10 o menos"] }
+                ]
+            },
+            alcoholismo: {
+                title: "Test de Alcoholismo",
+                color: "var(--accent-alcohol)",
+                questions: [
+                    { q: "¿Con qué frecuencia consume bebidas alcohólicas?", options: ["4 o más veces a la semana", "2 a 3 veces por semana", "Mensual o menos"] },
+                    { q: "¿Ha sentido culpa o remordimiento después de haber bebido?", options: ["Siempre o casi siempre", "A veces", "Nunca"] },
+                    { q: "¿Un familiar o médico se ha preocupado por su forma de beber?", options: ["Sí, y me han sugerido dejarlo", "Sí, pero de manera aislada", "No, nunca"] }
+                ]
+            },
+            adicciones: {
+                title: "Test de Adicciones",
+                color: "var(--accent-adicciones)",
+                questions: [
+                    { q: "¿Ha intentado reducir el uso de alguna sustancia o conducta sin éxito?", options: ["Muchas veces", "Pocas veces", "Nunca lo he necesitado"] },
+                    { q: "¿Ha dejado de hacer actividades importantes por consumir o realizar dicha conducta?", options: ["Frecuentemente", "Raras veces", "Nunca"] },
+                    { q: "¿Siente una necesidad psicológica intensa por repetir el hábito?", options: ["A diario", "En ocasiones", "Casi nunca o nunca"] }
+                ]
+            }
+        };
+
+        let currentCategory = null;
+        let currentQuestionIndex = 0;
+        let currentAnswers = [];
+
+        // Función unificada para actualizar contadores Globales y Mensuales
+        function updateAllCounters() {
+            const responses = JSON.parse(localStorage.getItem('surveyResponses')) || [];
+            
+            // Obtener mes y año actuales para el filtro dinámico
+            const currentDate = new Date();
+            const currentMonth = currentDate.getMonth(); // 0 - 11
+            const currentYear = currentDate.getFullYear();
+
+            // 1. Filtrar los globales
+            const globalTabaco = responses.filter(r => r.keyCategory === 'tabaquismo').length;
+            const globalAlcohol = responses.filter(r => r.keyCategory === 'alcoholismo').length;
+            const globalAdicciones = responses.filter(r => r.keyCategory === 'adicciones').length;
+
+            // 2. Filtrar los mensuales con base en la propiedad de timestamp guardada
+            const monthTabaco = responses.filter(r => {
+                const rDate = new Date(r.timestamp);
+                return r.keyCategory === 'tabaquismo' && rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear;
+            }).length;
+
+            const monthAlcohol = responses.filter(r => {
+                const rDate = new Date(r.timestamp);
+                return r.keyCategory === 'alcoholismo' && rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear;
+            }).length;
+
+            const monthAdicciones = responses.filter(r => {
+                const rDate = new Date(r.timestamp);
+                return r.keyCategory === 'adicciones' && rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear;
+            }).length;
+
+            // Asignar valores a la interfaz global
+            document.getElementById('count-tabaco-val').innerText = globalTabaco;
+            document.getElementById('count-alcohol-val').innerText = globalAlcohol;
+            document.getElementById('count-adicciones-val').innerText = globalAdicciones;
+
+            // Asignar valores a la interfaz mensual
+            document.getElementById('count-tabaco-month-val').innerText = monthTabaco;
+            document.getElementById('count-alcohol-month-val').innerText = monthAlcohol;
+            document.getElementById('count-adicciones-month-val').innerText = monthAdicciones;
+        }
+
+        function hideAllSections() {
+            document.getElementById('menu-container').style.display = 'none';
+            document.getElementById('community-panel-global').style.display = 'none';
+            document.getElementById('community-panel-month').style.display = 'none';
+            document.getElementById('test-window').style.display = 'none';
+            document.getElementById('admin-window').style.display = 'none';
+            document.getElementById('responses-window').style.display = 'none';
+        }
+
+        function goHome() {
+            hideAllSections();
+            updateAllCounters();
+            document.getElementById('community-panel-global').style.display = 'block';
+            document.getElementById('community-panel-month').style.display = 'block';
+            document.getElementById('menu-container').style.display = 'grid';
+        }
+
+        // ================= ACCESOS PROTEGIDOS =================
+
+        function accessAdmin() {
+            const pass = prompt("Ingrese la contraseña de Administrador:");
+            if (pass === ADMIN_PASSWORD) {
+                hideAllSections();
+                renderAuthorizedTable();
+                document.getElementById('admin-window').style.display = 'block';
+            } else if (pass !== null) {
+                alert("Contraseña Incorrecta.");
+            }
+        }
+
+        function accessResponses() {
+            const pass = prompt("Ingrese su contraseña (RFC autorizado o clave de Administrador):");
+            if (pass === null) return;
+
+            const authPersons = JSON.parse(localStorage.getItem('authorizedPersons')) || [];
+            const isAuthorizedRFC = authPersons.some(p => p.rfc.toUpperCase() === pass.toUpperCase());
+
+            if (pass === ADMIN_PASSWORD || isAuthorizedRFC) {
+                hideAllSections();
+                renderResponsesTable();
+                document.getElementById('responses-window').style.display = 'block';
+            } else {
+                alert("Acceso denegado. No es un Administrador o RFC Autorizado.");
+            }
+        }
+
+        // ================= ACCIONES DE ADMINISTRADOR =================
+
+        function saveAuthorizedPerson(e) {
+            e.preventDefault();
+            const rfcInput = document.getElementById('auth-rfc');
+            const nameInput = document.getElementById('auth-name');
+            
+            const rfc = rfcInput.value.trim().toUpperCase();
+            const name = nameInput.value.trim();
+
+            let authPersons = JSON.parse(localStorage.getItem('authorizedPersons')) || [];
+
+            if (authPersons.some(p => p.rfc === rfc)) {
+                alert("Este RFC ya se encuentra registrado.");
+                return;
+            }
+
+            authPersons.push({ rfc, name });
+            localStorage.setItem('authorizedPersons', JSON.stringify(authPersons));
+
+            rfcInput.value = '';
+            nameInput.value = '';
+            renderAuthorizedTable();
+            alert("Persona autorizada guardada con éxito.");
+        }
+
+        function renderAuthorizedTable() {
+            const tbody = document.getElementById('authorized-table-body');
+            const authPersons = JSON.parse(localStorage.getItem('authorizedPersons')) || [];
+            
+            if (authPersons.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="2" class="empty-message">No hay personal autorizado registrado aún.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = authPersons.map(p => `
+                <tr>
+                    <td style="font-family: monospace; font-size:1.1rem; color: var(--accent-admin)">${p.rfc}</td>
+                    <td>${p.name}</td>
+                </tr>
+            `).join('');
+        }
+
+        // ================= SISTEMA DE ENQUESTAS (TESTS) =================
+
+        function startTest(category) {
+            currentCategory = category;
+            currentQuestionIndex = 0;
+            currentAnswers = [];
+            
+            hideAllSections();
+            
+            const testWindow = document.getElementById('test-window');
+            const data = testsData[category];
+            
+            document.getElementById('test-title').innerText = data.title;
+            document.getElementById('progress-bar-fill').style.backgroundColor = data.color;
+            
+            testWindow.style.display = 'block';
+            showQuestion();
+        }
+
+        function showQuestion() {
+            const data = testsData[currentCategory];
+            const content = document.getElementById('test-content');
+            const progressPercent = (currentQuestionIndex / data.questions.length) * 100;
+            
+            document.getElementById('progress-bar-fill').style.width = `${progressPercent}%`;
+
+            if (currentQuestionIndex < data.questions.length) {
+                const currentQ = data.questions[currentQuestionIndex];
+                let optionsHtml = '';
+                
+                currentQ.options.forEach((option, index) => {
+                    optionsHtml += `<button class="option-btn" onclick="selectOption(${index})">${option}</button>`;
+                });
+
+                content.innerHTML = `
+                    <div class="question-box">
+                        <h3>Pregunta ${currentQuestionIndex + 1} de ${data.questions.length}: <br><br>${currentQ.q}</h3>
+                        ${optionsHtml}
+                    </div>
+                `;
+            } else {
+                saveAndShowResults();
+            }
+        }
+
+        function selectOption(index) {
+            currentAnswers.push(index);
+            currentQuestionIndex++;
+            showQuestion();
+        }
+
+        function saveAndShowResults() {
+            const data = testsData[currentCategory];
+            const content = document.getElementById('test-content');
+            document.getElementById('progress-bar-fill').style.width = `100%`;
+
+            const sum = currentAnswers.reduce((a, b) => a + b, 0);
+            let resultDiagnostic = "Bajo Riesgo / Preventivo";
+            if (sum <= 2) resultDiagnostic = "Alto Riesgo / Requiere Atención";
+            else if (sum <= 5) resultDiagnostic = "Riesgo Moderado";
+
+            const now = new Date();
+
+            const responses = JSON.parse(localStorage.getItem('surveyResponses')) || [];
+            const newResponse = {
+                date: now.toLocaleString(),
+                timestamp: now.toISOString(), // Almacenado como ISO para poder filtrar fechas con exactitud
+                category: data.title,
+                keyCategory: currentCategory, 
+                diagnostic: resultDiagnostic
+            };
+            responses.push(newResponse);
+            localStorage.setItem('surveyResponses', JSON.stringify(responses));
+
+            content.innerHTML = `
+                <div class="result-box">
+                    <i class="fa-solid fa-circle-check" style="color: ${data.color}"></i>
+                    <h3>¡Encuesta Guardada Exitosamente!</h3>
+                    <p style="margin: 15px 0 25px; color: var(--text-muted);">
+                        El test ha sido almacenado de manera confidencial en el sistema de la <strong>C.M.F. Ermita</strong>.
+                    </p>
+                    <button class="btn-back" style="border-color:${data.color}; color:${data.color}" onclick="goHome()">Finalizar y regresar al menú</button>
+                </div>
+            `;
+        }
+
+        // ================= VER RESPUESTAS GUARDADAS =================
+
+        function renderResponsesTable() {
+            const tbody = document.getElementById('responses-table-body');
+            const responses = JSON.parse(localStorage.getItem('surveyResponses')) || [];
+
+            if (responses.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="empty-message">No se han completado encuestas todavía.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = responses.map(r => `
+                <tr>
+                    <td>${r.date}</td>
+                    <td style="font-weight:600;">${r.category}</td>
+                    <td>
+                        <span style="color: ${r.diagnostic.includes('Alto') ? 'var(--accent-alcohol)' : r.diagnostic.includes('Moderado') ? 'var(--accent-tabaco)' : 'var(--accent-adicciones)'}">
+                            ● ${r.diagnostic}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
