@@ -121,7 +121,7 @@ app.post('/api/surveys', (req, res) => {
 
 
 
-// RUTA API: Obtener estadísticas y contadores unificados
+// RUTA API: Obtener estadísticas y contadores unificados (Versión Corregida)
 app.get('/api/stats', (req, res) => {
     const hoy = new Date();
     const anio = hoy.getFullYear();
@@ -145,7 +145,9 @@ app.get('/api/stats', (req, res) => {
             return res.status(500).json({ message: 'Error interno en el servidor.' });
         }
 
-        const stats = results[0] || {};
+        // Corrección de extracción: Tomamos el primer objeto del arreglo devuelto por MySQL
+        const stats = (results && results.length > 0) ? results[0] : {};
+        
         if (!stats.hasOwnProperty('savedGoal') || stats.savedGoal === null) {
             stats.savedGoal = 0;
         }
@@ -153,6 +155,10 @@ app.get('/api/stats', (req, res) => {
         res.status(200).json(stats);
     });
 });
+
+
+
+
 
 // =========================================================================
 // 4. RUTA PARA SERVIR EL HTML (Debe ir abajo de las rutas de la API)
