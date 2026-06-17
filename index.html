@@ -1324,39 +1324,75 @@ function deleteAuthorizedPerson(rfc) {
 
 
 
-function showQuestion() {
+
+
+
+
+// Función para mostrar las preguntas (Actualizada para consultar MySQL en la nube)
+async function showQuestion() {
     const data = testsData[currentCategory];
     const content = document.getElementById('test-content');
     const progressPercent = (currentQuestionIndex / data.questions.length) * 100;
     
-    document.getElementById('progress-bar-fill').style.width = `${progressPercent}%`;
+    if (document.getElementById('progress-bar-fill')) {
+        document.getElementById('progress-bar-fill').style.width = `${progressPercent}%`;
+    }
 
     if (currentQuestionIndex < data.questions.length) {
         const currentQ = data.questions[currentQuestionIndex];
         
-        // 1. VALIDACIÓN: Si la pregunta requiere cargar los usuarios de localStorage
+        // 1. VALIDACIÓN: Si la pregunta requiere cargar los usuarios desde la Base de Datos
         if (currentQ.type === "storage-select") {
-            // Obtenemos las personas autorizadas desde tu localStorage real
-            const authPersons = JSON.parse(localStorage.getItem('authorizedPersons')) || [];
             
-            // Creamos las opciones del select dinámicamente
-            let selectOptionsHtml = `<option value="">-- Seleccione una persona autorizada --</option>`;
-            authPersons.forEach(person => {
-                selectOptionsHtml += `<option value="${person.rfc}">${person.name} (${person.rfc})</option>`;
-            });
-
-            // Pintamos el Box/Select junto con un botón para procesar la respuesta y avanzar
+            // Pintamos la estructura básica con un mensaje temporal de carga
             content.innerHTML = `
                 <div class="question-box">
                     <h3>Pregunta ${currentQuestionIndex + 1} de ${data.questions.length}: <br><br>${currentQ.q}</h3>
                     <div style="margin: 20px 0;">
                         <select id="auth-person-select" class="form-control" style="width:100%; padding:12px; border-radius:8px; font-size:16px;">
-                            ${selectOptionsHtml}
+                            <option value="">Cargando personal desde la base de datos...</option>
                         </select>
                     </div>
                     <button class="option-btn" onclick="submitStorageOption()" style="margin-top:10px; width:100%;">Continuar</button>
                 </div>
             `;
+
+            try {
+                // Consultamos a tu servidor de Render la lista de doctores en la nube
+                // Usa la constante BASE_URL definida al inicio de tu archivo app.js
+                const response = await fetch(`${BASE_URL}/api/doctors`);
+                
+                if (!response.ok) {
+                    throw new Error('No se pudo obtener la respuesta del servidor.');
+                }
+
+                const authPersons = await response.json();
+                const selectElement = document.getElementById('auth-person-select');
+
+                if (selectElement) {
+                    let selectOptionsHtml = `<option value="">-- Seleccione una persona autorizada --</option>`;
+                    
+                    if (authPersons.length === 0) {
+                        selectOptionsHtml = `<option value="">No hay personal registrado en el sistema</option>`;
+                    } else {
+                        // Recorremos los registros devueltos por MySQL
+                        authPersons.forEach(person => {
+                            selectOptionsHtml += `<option value="${person.rfc}">${person.name} (${person.rfc})</option>`;
+                        });
+                    }
+                    
+                    // Inyectamos las opciones reales en el selector
+                    selectElement.innerHTML = selectOptionsHtml;
+                }
+
+            } catch (error) {
+                console.error('Error al cargar médicos en showQuestion:', error);
+                const selectElement = document.getElementById('auth-person-select');
+                if (selectElement) {
+                    selectElement.innerHTML = `<option value="">Error al conectar con la base de datos</option>`;
+                }
+            }
+
         } else {
             // 2. FLUJO NORMAL: Preguntas estándar con botones de opción
             let optionsHtml = '';
@@ -1372,9 +1408,18 @@ function showQuestion() {
             `;
         }
     } else {
+        // Al terminar todas las preguntas, llamamos a la función de guardado en la nube
         saveAndShowResults();
     }
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -1482,6 +1527,53 @@ async function saveAndShowResults() {
         </div>
     `;
 }
+
+
+
+
+
+
+
+
+
+// Llena dinámicamente el selector con los médicos registrados en la base de datos
+async function populateAssistantSelect() {
+    const selectElement = document.getElementById('auth-person-select');
+    if (!selectElement) return;
+
+    try {
+        // Consultamos la lista de doctores a tu servidor en Render
+        const response = await fetch(`${BASE_URL}/api/doctors`);
+        
+        if (!response.ok) {
+            throw new Error('No se pudo obtener la lista de médicos.');
+        }
+
+        const doctors = await response.json();
+
+        // Limpiamos las opciones previas y dejamos solo la opción por defecto
+        selectElement.innerHTML = '<option value="">-- Selecciona Personal Autorizado --</option>';
+
+        // Si no hay médicos registrados en MySQL, avisamos visualmente
+        if (doctors.length === 0) {
+            selectElement.innerHTML = '<option value="">No hay médicos registrados en el sistema</option>';
+            return;
+        }
+
+        // Recorremos los médicos de la BD y los agregamos al elemento select del HTML
+        doctors.forEach(doctor => {
+            const option = document.createElement('option');
+            option.value = doctor.rfc; // El valor interno será el RFC
+            option.text = `${doctor.name} (${doctor.rfc})`; // Lo que ve el usuario en pantalla
+            selectElement.appendChild(option);
+        });
+
+    } catch (error) {
+        console.error('Error al llenar el selector de asistentes:', error);
+        selectElement.innerHTML = '<option value="">Error al cargar la lista de personal</option>';
+    }
+}
+
 
 
 

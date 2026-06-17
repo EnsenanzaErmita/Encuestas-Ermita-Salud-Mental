@@ -80,6 +80,47 @@ app.post('/api/goals', (req, res) => {
     });
 });
 
+
+
+
+
+
+
+
+// RUTA API: Guardar una nueva respuesta de encuesta con diagnóstico y asistente
+app.post('/api/surveys', (req, res) => {
+    const { keyCategory, diagnostic, assistant } = req.body;
+
+    // Validar que la categoría sea una de las tres permitidas
+    if (!keyCategory || !['tabaquismo', 'alcoholismo', 'adicciones'].includes(keyCategory)) {
+        return res.status(400).json({ message: 'Categoría de encuesta no válida.' });
+    }
+
+    // Insertar la encuesta en la base de datos de Clever Cloud
+    const sql = 'INSERT INTO survey_responses (keyCategory, diagnostic, assistant) VALUES (?, ?, ?)';
+    db.query(sql, [keyCategory, diagnostic, assistant], (err, result) => {
+        if (err) {
+            console.error('Error al insertar encuesta:', err);
+            return res.status(500).json({ message: 'Error interno al guardar la encuesta.' });
+        }
+        res.status(201).json({ message: 'Encuesta registrada con éxito.' });
+    });
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // RUTA API: Obtener estadísticas y contadores unificados
 app.get('/api/stats', (req, res) => {
     const hoy = new Date();
