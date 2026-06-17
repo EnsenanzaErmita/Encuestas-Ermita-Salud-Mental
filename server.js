@@ -12,7 +12,7 @@ app.use(express.static(__dirname));
 
 // 2. CONFIGURACIÓN DE BASE DE DATOS (CLEVER CLOUD)
 const db = mysql.createConnection({
-    host: 'bqxquadwgh6wn3twrgyy-mysql.services.clever-cloud.com',
+    host: '://clever-cloud.com',
     user: 'usp9nsl8ipuiouao',
     password: 'vXf0fCll6xPxv7f6XV84',
     database: 'bqxquadwgh6wn3twrgyy',
@@ -30,6 +30,18 @@ db.connect(err => {
 // =========================================================================
 // 3. RUTAS DE LA API (Deben ir arriba del HTML de forma obligatoria)
 // =========================================================================
+
+// RUTA API: Obtener la lista de todos los doctores
+app.get('/api/doctors', (req, res) => {
+    const sql = 'SELECT rfc, name FROM doctors ORDER BY name ASC';
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error('Error al consultar doctores:', err);
+            return res.status(500).json({ message: 'Error al obtener los datos.' });
+        }
+        res.status(200).json(results);
+    });
+});
 
 // RUTA API: Guardar doctores
 app.post('/api/doctors', (req, res) => {
@@ -59,7 +71,7 @@ app.post('/api/doctors', (req, res) => {
     });
 });
 
-// RUTA API: Guardar o actualizar la meta mensual (ESTA HACE FALTA)
+// RUTA API: Guardar o actualizar la meta mensual
 app.post('/api/goals', (req, res) => {
     const { month_year, goal_value } = req.body;
     if (!month_year || !goal_value) {
@@ -80,23 +92,14 @@ app.post('/api/goals', (req, res) => {
     });
 });
 
-
-
-
-
-
-
-
 // RUTA API: Guardar una nueva respuesta de encuesta con diagnóstico y asistente
 app.post('/api/surveys', (req, res) => {
     const { keyCategory, diagnostic, assistant } = req.body;
 
-    // Validar que la categoría sea una de las tres permitidas
     if (!keyCategory || !['tabaquismo', 'alcoholismo', 'adicciones'].includes(keyCategory)) {
         return res.status(400).json({ message: 'Categoría de encuesta no válida.' });
     }
 
-    // Insertar la encuesta en la base de datos de Clever Cloud
     const sql = 'INSERT INTO survey_responses (keyCategory, diagnostic, assistant) VALUES (?, ?, ?)';
     db.query(sql, [keyCategory, diagnostic, assistant], (err, result) => {
         if (err) {
@@ -107,21 +110,7 @@ app.post('/api/surveys', (req, res) => {
     });
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// RUTA API: Obtener estadísticas y contadores unificados (Versión Corregida)
+// RUTA API: Obtener estadísticas y contadores unificados (CORREGIDA)
 app.get('/api/stats', (req, res) => {
     const hoy = new Date();
     const anio = hoy.getFullYear();
@@ -145,20 +134,19 @@ app.get('/api/stats', (req, res) => {
             return res.status(500).json({ message: 'Error interno en el servidor.' });
         }
 
-        // Corrección de extracción: Tomamos el primer objeto del arreglo devuelto por MySQL
-        const stats = (results && results.length > 0) ? results[0] : {};
-        
-        if (!stats.hasOwnProperty('savedGoal') || stats.savedGoal === null) {
+        // Extracción correcta: Tomamos la primera fila mapeada por MySQL
+        const stats = (results && results.length > 0) ? results[0] : {
+            globalTabaco: 0, globalAlcohol: 0, globalAdicciones: 0,
+            monthTabaco: 0, monthAlcohol: 0, monthAdicciones: 0, savedGoal: 0
+        };
+
+        if (stats.savedGoal === null) {
             stats.savedGoal = 0;
         }
 
         res.status(200).json(stats);
     });
 });
-
-
-
-
 
 // =========================================================================
 // 4. RUTA PARA SERVIR EL HTML (Debe ir abajo de las rutas de la API)
