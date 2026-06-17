@@ -65,6 +65,63 @@ app.post('/api/doctors', (req, res) => {
     });
 });
 
+
+
+
+
+// RUTA API: Obtiene las estadísticas globales, mensuales y la meta actual
+app.get('/api/stats', (req, res) => {
+    // 1. Obtener automáticamente el año y mes actuales para los filtros
+    const hoy = new Date();
+    const anio = hoy.getFullYear();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const monthYear = `${anio}-${mes}`; // Formato 'YYYY-MM'
+
+    // 2. Consulta múltiple para traer todos los conteos y la meta de forma eficiente
+    const sql = `
+        SELECT 
+            (SELECT COUNT(*) FROM survey_responses WHERE keyCategory = 'tabaquismo') AS globalTabaco,
+            (SELECT COUNT(*) FROM survey_responses WHERE keyCategory = 'alcoholismo') AS globalAlcohol,
+            (SELECT COUNT(*) FROM survey_responses WHERE keyCategory = 'adicciones') AS globalAdicciones,
+            (SELECT COUNT(*) FROM survey_responses WHERE keyCategory = 'tabaquismo' AND DATE_FORMAT(timestamp, '%Y-%m') = ?) AS monthTabaco,
+            (SELECT COUNT(*) FROM survey_responses WHERE keyCategory = 'alcoholismo' AND DATE_FORMAT(timestamp, '%Y-%m') = ?) AS monthAlcohol,
+            (SELECT COUNT(*) FROM survey_responses WHERE keyCategory = 'adicciones' AND DATE_FORMAT(timestamp, '%Y-%m') = ?) AS monthAdicciones,
+            (SELECT goal_value FROM monthly_goals WHERE month_year = ?) AS savedGoal;
+    `;
+
+    db.query(sql, [monthYear, monthYear, monthYear, monthYear], (err, results) => {
+        if (err) {
+            console.error('Error al calcular estadísticas:', err);
+            return res.status(500).json({ message: 'Error interno en el servidor.' });
+        }
+
+        // Si no hay una meta fijada para este mes, asignamos 0 por defecto
+        const stats = results[0];
+        if (stats.savedGoal === null) {
+            stats.savedGoal = 0;
+        }
+
+        res.status(200).json(stats);
+    });
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // 5. ARRANCAR EL SERVIDOR (Puerto dinámico para Hosting o 3000 local)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

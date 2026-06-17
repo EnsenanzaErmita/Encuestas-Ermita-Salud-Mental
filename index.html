@@ -903,78 +903,130 @@ table td:last-child {
         let currentQuestionIndex = 0;
         let currentAnswers = [];
 
-        function updateAllCounters() {
-            const responses = JSON.parse(localStorage.getItem('surveyResponses')) || [];
+
+
+
+
+
+// Actualizar todos los contadores visuales consultando el servidor
+async function updateAllCounters() {
+    try {
+        // 1. Consultar las estadísticas unificadas en Render
+        // ⚠️ REEMPLAZA CON TU URL REAL DE RENDER:
+        const response = await fetch('https://encuestas-ermita-salud-mental.onrender.com/api/stats');
+        
+        if (!response.ok) {
+            throw new Error('Error al obtener contadores del servidor.');
+        }
+
+        const stats = await response.json();
+
+        // 2. Asignar los Totales Globales al HTML
+        document.getElementById('count-tabaco-val').innerText = stats.globalTabaco;
+        document.getElementById('count-alcohol-val').innerText = stats.globalAlcohol;
+        document.getElementById('count-adicciones-val').innerText = stats.globalAdicciones;
+
+        // 3. Asignar los Totales del Mes actual al HTML
+        document.getElementById('count-tabaco-month-val').innerText = stats.monthTabaco;
+        document.getElementById('count-alcohol-month-val').innerText = stats.monthAlcohol;
+        document.getElementById('count-adicciones-month-val').innerText = stats.monthAdicciones;
+
+        // 4. Lógica Visual de la Meta Mensual
+        const totalMonthSurveys = stats.monthTabaco + stats.monthAlcohol + stats.monthAdicciones;
+        const goalNumber = parseInt(stats.savedGoal);
+
+        // Si la meta de la BD es mayor a 0, pintamos la barra de progreso
+        if (goalNumber > 0) {
+            document.getElementById('goal-container').style.display = 'block';
+            document.getElementById('goal-fraction-text').innerText = `${totalMonthSurveys} / ${goalNumber}`;
             
-            const currentDate = new Date();
-            const currentMonth = currentDate.getMonth(); 
-            const currentYear = currentDate.getFullYear();
-
-            // Cálculos Globales
-            const globalTabaco = responses.filter(r => r.keyCategory === 'tabaquismo').length;
-            const globalAlcohol = responses.filter(r => r.keyCategory === 'alcoholismo').length;
-            const globalAdicciones = responses.filter(r => r.keyCategory === 'adicciones').length;
-
-            // Cálculos del Mes actual
-            const monthTabaco = responses.filter(r => {
-                const rDate = new Date(r.timestamp);
-                return r.keyCategory === 'tabaquismo' && rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear;
-            }).length;
-
-            const monthAlcohol = responses.filter(r => {
-                const rDate = new Date(r.timestamp);
-                return r.keyCategory === 'alcoholismo' && rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear;
-            }).length;
-
-            const monthAdicciones = responses.filter(r => {
-                const rDate = new Date(r.timestamp);
-                return r.keyCategory === 'adicciones' && rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear;
-            }).length;
-
-
-
-
-            document.getElementById('count-tabaco-val').innerText = globalTabaco;
-            document.getElementById('count-alcohol-val').innerText = globalAlcohol;
-            document.getElementById('count-adicciones-val').innerText = globalAdicciones;
-
-            document.getElementById('count-tabaco-month-val').innerText = monthTabaco;
-            document.getElementById('count-alcohol-month-val').innerText = monthAlcohol;
-            document.getElementById('count-adicciones-month-val').innerText = monthAdicciones;
-
-
-
-            // Lógica de Meta Mensual
-            const totalMonthSurveys = monthTabaco + monthAlcohol + monthAdicciones;
-            const savedGoal = localStorage.getItem('surveyMonthlyGoal');
-
-            if (savedGoal) {
-                const goalNumber = parseInt(savedGoal);
-                document.getElementById('goal-container').style.display = 'block';
-                document.getElementById('goal-fraction-text').innerText = `${totalMonthSurveys} / ${goalNumber}`;
-                
-                const percentage = Math.min((totalMonthSurveys / goalNumber) * 100, 100);
-                document.getElementById('goal-bar-fill').style.width = `${percentage}%`;
-                
-                document.getElementById('monthly-goal-input').value = goalNumber;
-            } else {
-                document.getElementById('goal-container').style.display = 'none';
-            }
+            const percentage = Math.min((totalMonthSurveys / goalNumber) * 100, 100);
+            document.getElementById('goal-bar-fill').style.width = `${percentage}%`;
+            
+            document.getElementById('monthly-goal-input').value = goalNumber;
+        } else {
+            // Si no hay meta registrada en el mes, ocultamos el contenedor de la barra
+            document.getElementById('goal-container').style.display = 'none';
+            document.getElementById('monthly-goal-input').value = '';
         }
 
+    } catch (error) {
+        console.error('Error al actualizar contadores en la interfaz:', error);
+    }
+}
 
-        // Guardar Meta Mensual
-        function saveMonthlyGoal(e) {
-            e.preventDefault();
-            const goalValue = document.getElementById('monthly-goal-input').value;
-            if (goalValue && parseInt(goalValue) > 0) {
-                localStorage.setItem('surveyMonthlyGoal', goalValue);
-                updateAllCounters();
-                alert(`Meta mensual mensual fijada con éxito en ${goalValue} encuestas.`);
-//            	showNotification("Meta mensual actualizada con éxito.");
+// Ejecutar de forma automática cuando cargue la página web
+document.addEventListener('DOMContentLoaded', updateAllCounters);
 
-            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Guardar Meta Mensual en la Base de Datos
+async function saveMonthlyGoal(e) {
+    e.preventDefault();
+    const goalInput = document.getElementById('monthly-goal-input');
+    const goalValue = goalInput.value;
+
+    if (!goalValue || parseInt(goalValue) <= 0) {
+        alert("Por favor, introduce un número válido mayor a 0.");
+        return;
+    }
+
+    // 1. Obtener automáticamente el año y mes actuales en formato 'YYYY-MM' (ej: '2026-06')
+    const hoy = new Date();
+    const anio = hoy.getFullYear();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0'); // Los meses en JS van de 0 a 11
+    const month_year = `${anio}-${mes}`;
+
+    try {
+        // 2. Enviar la meta al servidor de Render mediante una petición POST
+        // ⚠️ REEMPLAZA CON TU URL REAL DE RENDER:
+        const response = await fetch('https://encuestas-ermita-salud-mental.onrender.com/api/goals', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                month_year: month_year, 
+                goal_value: parseInt(goalValue) 
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Error al guardar la meta mensual.');
         }
+
+        // 3. Si todo salió bien, actualizamos los contadores de la pantalla
+        if (typeof updateAllCounters === 'function') {
+            updateAllCounters();
+        }
+
+        alert(`Meta fijada con éxito en ${goalValue} encuestas para el mes actual (${month_year}).`);
+
+    } catch (error) {
+        alert(error.message);
+        console.error('Error:', error);
+    }
+}
 
         // Cambiar estado de la opción eliminar encuestas (Habilitar / Deshabilitar)
         function toggleDeleteOption(value) {
