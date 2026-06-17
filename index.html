@@ -1418,16 +1418,19 @@ function submitStorageOption() {
 
 
 
-function saveAndShowResults() {
+
+
+
+
+async function saveAndShowResults() {
     const data = testsData[currentCategory];
     const content = document.getElementById('test-content');
     document.getElementById('progress-bar-fill').style.width = `100%`;
 
-    // 1. OBTENER EL ASISTENTE: Como es la última pregunta, está al final del arreglo currentAnswers
-    // Guardamos el nombre completo de quien asistió la encuesta
+    // 1. OBTENER EL ASISTENTE
     const selectedAssistant = currentAnswers[currentAnswers.length - 1] || "No especificado";
 
-    // 2. CALCULAR LA SUMA EXCLUYENDO LA ÚLTIMA PREGUNTA (ya que contiene el nombre texto y no un número)
+    // 2. CALCULAR LA SUMA EXCLUYENDO LA ÚLTIMA PREGUNTA
     const numericAnswers = currentAnswers.slice(0, -1);
     const sum = numericAnswers.reduce((a, b) => a + b, 0);
 
@@ -1435,28 +1438,43 @@ function saveAndShowResults() {
     if (sum <= 2) resultDiagnostic = "Alto Riesgo / Requiere Atención";
     else if (sum <= 5) resultDiagnostic = "Riesgo Moderado";
 
-    const now = new Date();
+    try {
+        // 3. ENVIAR LA ENCUESTA AL SERVIDOR EN LA NUBE (RENDER)
+        // Usa la misma constante BASE_URL que definimos al inicio de tu app.js
+        const response = await fetch(`${BASE_URL}/api/surveys`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                keyCategory: currentCategory,
+                diagnostic: resultDiagnostic,
+                assistant: selectedAssistant
+            })
+        });
 
-    const responses = JSON.parse(localStorage.getItem('surveyResponses')) || [];
-    const newResponse = {
-        date: now.toLocaleString(),
-        timestamp: now.toISOString(), 
-        category: data.title,
-        keyCategory: currentCategory, 
-        diagnostic: resultDiagnostic,
-        assistant: selectedAssistant // 3. GUARDAMOS EL NOMBRE EN LA PROPIEDAD QUE CORRESPONDE A LA TABLA
-    };
-    responses.push(newResponse);
-    localStorage.setItem('surveyResponses', JSON.stringify(responses));
+        if (!response.ok) {
+            throw new Error('No se pudo guardar la encuesta en el servidor de internet.');
+        }
 
+        // 4. ACTUALIZAR LOS CONTADORES EN PANTALLA INMEDIATAMENTE EN CASO DE ÉXITO
+        if (typeof updateAllCounters === 'function') {
+            await updateAllCounters();
+        }
+
+    } catch (error) {
+        console.error('Error al enviar la encuesta:', error);
+        alert("Atención: Los datos no se guardaron en la nube, pero se mostrará el resultado en pantalla.");
+    }
+
+    // 5. MOSTRAR LA PANTALLA DE ÉXITO VISUAL AL USUARIO
     content.innerHTML = `
         <div class="result-box">
             <i class="fa-solid fa-circle-check" style="color: ${data.color}"></i>
             <h3>¡Encuesta Guardada Exitosamente!</h3>
             <p style="margin: 15px 0 5px; color: var(--text-muted);">
-                El test ha sido almacenado de manera confidencial en el sistema de la <strong>C.M.F. Ermita</strong>.
+                El test ha sido almacenado de manera confidencial en la base de datos de la <strong>C.M.F. Ermita</strong>.
             </p>
-            <!-- Muestra visual opcional en la pantalla de éxito -->
             <p style="margin-bottom: 25px; font-size: 14px; color: #555;">
                 <strong>Asistido por:</strong> ${selectedAssistant}
             </p>
