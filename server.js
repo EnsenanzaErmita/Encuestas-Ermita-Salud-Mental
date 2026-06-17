@@ -10,25 +10,46 @@ app.use(cors({ origin: '*' }));
 app.use(express.json());
 app.use(express.static(__dirname)); 
 
-// 2. CONFIGURACIÓN DE BASE DE DATOS (CLEVER CLOUD)
-const db = mysql.createConnection({
-    host: 'clever-cloud.com',
+// 2. CONFIGURACIÓN DE BASE DE DATOS ADAPTATIVA (CLEVER CLOUD)
+const dbConfig = {
+    host: '://clever-cloud.com',
     user: 'usp9nsl8ipuiouao',
     password: 'vXf0fCll6xPxv7f6XV84',
     database: 'bqxquadwgh6wn3twrgyy',
     port: 3306
-});
+};
 
-db.connect(err => {
-    if (err) {
-        console.error('Error crítico al conectar a MySQL:', err);
-        return;
-    }
-    console.log('¡Conexión exitosa a la base de datos de Clever Cloud!');
-});
+let db;
+
+function handleDisconnect() {
+    db = mysql.createConnection(dbConfig); // Crea una nueva conexión
+
+    db.connect(err => {
+        if (err) {
+            console.error('Error al reconectar a MySQL, reintentando en 2 segundos...', err);
+            setTimeout(handleDisconnect, 2000); // Si falla, espera 2 segundos y reintenta
+        } else {
+            console.log('¡Conexión exitosa y activa con la base de datos de Clever Cloud!');
+        }
+    });
+
+    // Si la base de datos cierra el canal por inactividad, atrapamos el error aquí
+    db.on('error', err => {
+        console.error('Se detectó un error en el nodo de MySQL:', err);
+        if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET') {
+            console.log('Conexión perdida con la nube. Iniciando reconexión automática...');
+            handleDisconnect(); // Reconectamos el servidor automáticamente
+        } else {
+            throw err;
+        }
+    });
+}
+
+// Inicializamos la conexión automática
+handleDisconnect();
 
 // =========================================================================
-// 3. RUTAS DE LA API (Deben ir arriba del HTML de forma obligatoria)
+// 3. RUTAS DE LA API
 // =========================================================================
 
 // RUTA API: Obtener la lista de todos los doctores
@@ -110,7 +131,7 @@ app.post('/api/surveys', (req, res) => {
     });
 });
 
-// RUTA API: Obtener estadísticas y contadores unificados (CORREGIDA)
+// RUTA API: Obtener estadísticas y contadores unificados
 app.get('/api/stats', (req, res) => {
     const hoy = new Date();
     const anio = hoy.getFullYear();
@@ -134,7 +155,7 @@ app.get('/api/stats', (req, res) => {
             return res.status(500).json({ message: 'Error interno en el servidor.' });
         }
 
-        // Extracción correcta: Tomamos la primera fila mapeada por MySQL
+        // Extraemos de forma segura el primer registro de la fila única
         const stats = (results && results.length > 0) ? results[0] : {
             globalTabaco: 0, globalAlcohol: 0, globalAdicciones: 0,
             monthTabaco: 0, monthAlcohol: 0, monthAdicciones: 0, savedGoal: 0
@@ -149,7 +170,7 @@ app.get('/api/stats', (req, res) => {
 });
 
 // =========================================================================
-// 4. RUTA PARA SERVIR EL HTML (Debe ir abajo de las rutas de la API)
+// 4. RUTA PARA SERVIR EL HTML (Abajo de la API)
 // =========================================================================
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
