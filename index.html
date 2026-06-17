@@ -1115,29 +1115,55 @@ table td:last-child {
             }
         }
 
-        function saveAuthorizedPerson(e) {
-            e.preventDefault();
-            const rfcInput = document.getElementById('auth-rfc');
-            const nameInput = document.getElementById('auth-name');
-            
-            const rfc = rfcInput.value.trim().toUpperCase();
-            const name = nameInput.value.trim();
 
-            let authPersons = JSON.parse(localStorage.getItem('authorizedPersons')) || [];
 
-            if (authPersons.some(p => p.rfc === rfc)) {
-                alert("Este RFC ya se encuentra registrado.");
-                return;
-            }
 
-            authPersons.push({ rfc, name });
-            localStorage.setItem('authorizedPersons', JSON.stringify(authPersons));
 
-            rfcInput.value = '';
-            nameInput.value = '';
-            renderAuthorizedTable();
-            alert("Persona autorizada guardada con éxito.");
+
+
+
+async function saveAuthorizedPerson(e) {
+    e.preventDefault();
+    const rfcInput = document.getElementById('auth-rfc');
+    const nameInput = document.getElementById('auth-name');
+    
+    const rfc = rfcInput.value.trim().toUpperCase();
+    const name = nameInput.value.trim();
+
+    try {
+        // Envia los datos al servidor mediante una petición POST
+        const response = await fetch('https://encuestas-ermita-salud-mental.onrender.com/api/doctors', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ rfc, name })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            // Muestra el error enviado por el servidor (por ejemplo, RFC duplicado)
+            throw new Error(data.message || 'Error al guardar el doctor.');
         }
+
+        // Limpia los campos si la inserción fue exitosa
+        rfcInput.value = '';
+        nameInput.value = '';
+        
+        // renderAuthorizedTable(); // Descomenta si adaptas esta función para leer de la BD
+        alert("Persona autorizada guardada con éxito en la base de datos.");
+
+    } catch (error) {
+        alert(error.message);
+        console.error('Error:', error);
+    }
+}
+
+
+
+
+
 
 
 
@@ -1489,5 +1515,6 @@ function renderResponsesTable() {
 
 
     </script>
+<script src="js/app.js"></script>
 </body>
 </html>
