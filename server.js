@@ -1,16 +1,16 @@
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
-const path = require('path'); // Módulo nativo para manejar rutas de archivos
+const path = require('path'); 
 
 const app = express();
 
-// 1. MIDDLEWARES (Configuraciones de seguridad y lectura de datos)
+// 1. MIDDLEWARES
 app.use(cors({ origin: '*' }));
 app.use(express.json());
-app.use(express.static(__dirname)); // Permite cargar CSS/JS locales si tu HTML los usa
+app.use(express.static(__dirname)); 
 
-// 2. CONFIGURACIÓN DE TU BASE DE DATOS EN LA NUBE (CLEVER CLOUD)
+// 2. CONFIGURACIÓN DE BASE DE DATOS (CLEVER CLOUD)
 const db = mysql.createConnection({
     host: 'bqxquadwgh6wn3twrgyy-mysql.services.clever-cloud.com',
     user: 'usp9nsl8ipuiouao',
@@ -19,7 +19,6 @@ const db = mysql.createConnection({
     port: 3306
 });
 
-// Conexión inicial a MySQL
 db.connect(err => {
     if (err) {
         console.error('Error crítico al conectar a MySQL:', err);
@@ -28,56 +27,66 @@ db.connect(err => {
     console.log('¡Conexión exitosa a la base de datos de Clever Cloud!');
 });
 
-// 3. RUTA PARA SERVIR EL HTML (Para cuando tu app esté en internet)
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
+// =========================================================================
+// 3. RUTAS DE LA API (Deben ir arriba del HTML de forma obligatoria)
+// =========================================================================
 
-// 4. RUTA API: Guarda los datos en la tabla "doctors"
+// RUTA API: Guardar doctores
 app.post('/api/doctors', (req, res) => {
     const { rfc, name } = req.body;
-
     if (!rfc || !name) {
         return res.status(400).json({ message: 'El nombre y el RFC son campos obligatorios.' });
     }
 
-    // Validar si el RFC ya existe
     const checkSql = 'SELECT * FROM doctors WHERE rfc = ?';
     db.query(checkSql, [rfc], (err, results) => {
         if (err) {
             console.error('Error al buscar RFC:', err);
             return res.status(500).json({ message: 'Error interno en el servidor.' });
         }
-
         if (results.length > 0) {
             return res.status(400).json({ message: 'Este RFC ya se encuentra registrado en el sistema.' });
         }
 
-        // Insertar el nuevo registro
         const insertSql = 'INSERT INTO doctors (rfc, name) VALUES (?, ?)';
         db.query(insertSql, [rfc, name], (err, result) => {
             if (err) {
                 console.error('Error al insertar doctor:', err);
-                return res.status(500).json({ message: 'No se pudieron guardar los datos en la base de datos.' });
+                return res.status(500).json({ message: 'No se pudieron guardar los datos.' });
             }
             res.status(201).json({ message: 'Doctor guardado correctamente.' });
         });
     });
 });
 
+// RUTA API: Guardar o actualizar la meta mensual (ESTA HACE FALTA)
+app.post('/api/goals', (req, res) => {
+    const { month_year, goal_value } = req.body;
+    if (!month_year || !goal_value) {
+        return res.status(400).json({ message: 'El mes y el valor de la meta son obligatorios.' });
+    }
 
+    const sql = `
+        INSERT INTO monthly_goals (month_year, goal_value) 
+        VALUES (?, ?) 
+        ON DUPLICATE KEY UPDATE goal_value = ?
+    `;
+    db.query(sql, [month_year, goal_value, goal_value], (err, result) => {
+        if (err) {
+            console.error('Error al guardar meta:', err);
+            return res.status(500).json({ message: 'Error interno al guardar la meta.' });
+        }
+        res.status(200).json({ message: 'Meta mensual guardada correctamente.' });
+    });
+});
 
-
-
-// RUTA API: Obtiene las estadísticas globales, mensuales y la meta actual
+// RUTA API: Obtener estadísticas y contadores unificados
 app.get('/api/stats', (req, res) => {
-    // 1. Obtener automáticamente el año y mes actuales para los filtros
     const hoy = new Date();
     const anio = hoy.getFullYear();
     const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-    const monthYear = `${anio}-${mes}`; // Formato 'YYYY-MM'
+    const monthYear = `${anio}-${mes}`; 
 
-    // 2. Consulta múltiple para traer todos los conteos y la meta de forma eficiente
     const sql = `
         SELECT 
             (SELECT COUNT(*) FROM survey_responses WHERE keyCategory = 'tabaquismo') AS globalTabaco,
@@ -95,9 +104,8 @@ app.get('/api/stats', (req, res) => {
             return res.status(500).json({ message: 'Error interno en el servidor.' });
         }
 
-        // Si no hay una meta fijada para este mes, asignamos 0 por defecto
-        const stats = results[0];
-        if (stats.savedGoal === null) {
+        const stats = results[0] || {};
+        if (!stats.hasOwnProperty('savedGoal') || stats.savedGoal === null) {
             stats.savedGoal = 0;
         }
 
@@ -105,24 +113,14 @@ app.get('/api/stats', (req, res) => {
     });
 });
 
+// =========================================================================
+// 4. RUTA PARA SERVIR EL HTML (Debe ir abajo de las rutas de la API)
+// =========================================================================
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// 5. ARRANCAR EL SERVIDOR (Puerto dinámico para Hosting o 3000 local)
+// 5. ARRANCAR EL SERVIDOR
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en el puerto: ${PORT}`);
