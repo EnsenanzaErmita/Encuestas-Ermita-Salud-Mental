@@ -12,7 +12,7 @@ app.use(express.static(__dirname));
 
 // 2. CONFIGURACIÓN DE BASE DE DATOS (CLEVER CLOUD)
 const db = mysql.createConnection({
-    host: '://clever-cloud.com',
+    host: 'clever-cloud.com',
     user: 'usp9nsl8ipuiouao',
     password: 'vXf0fCll6xPxv7f6XV84',
     database: 'bqxquadwgh6wn3twrgyy',
