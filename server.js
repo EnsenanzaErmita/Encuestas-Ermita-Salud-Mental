@@ -98,6 +98,34 @@ app.post('/api/doctors', (req, res) => {
 });
 
 
+
+
+
+// RUTA API: Eliminar un empleado por su RFC
+app.delete('/api/doctors/:rfc', (req, res) => {
+    const { rfc } = req.params;
+
+    const sql = 'DELETE FROM employees WHERE rfc = ?';
+    db.query(sql, [rfc], (err, result) => {
+        if (err) {
+            console.error('Error al eliminar empleado:', err);
+            return res.status(500).json({ message: 'Error interno al intentar eliminar.' });
+        }
+        res.status(200).json({ message: 'Usuario eliminado correctamente.' });
+    });
+});
+
+
+
+
+
+
+
+
+
+
+
+
 // RUTA API: Guardar o actualizar la meta mensual
 app.post('/api/goals', (req, res) => {
     const { month_year, goal_value } = req.body;

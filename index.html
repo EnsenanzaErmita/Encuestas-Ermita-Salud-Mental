@@ -777,20 +777,21 @@ table td:last-child {
                 </div>
             </div>
 
-            <h3 style="margin-top: 35px; margin-bottom: 15px;">Personal Registrado</h3>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>RFC / Contraseña</th>
-                            <th>Nombre Completo</th>
-                            <th>Eliminar Usuario</th>
-                        </tr>
-                    </thead>
-                    <tbody id="authorized-table-body"></tbody>
-                </table>
-            </div>
-        </div>
+	    <h3 style="margin-top: 35px; margin-bottom: 15px;">Personal Registrado</h3>
+	    <div class="table-container">
+    		<table>
+        	    <thead>
+            	    <tr>
+                	<th>RFC / Contraseña</th>
+                	<th>Nombre Completo</th>
+                	<th>Eliminar Usuario</th>
+            	    </tr>
+        	    </thead>
+        <!-- Aquí es donde JavaScript inyectará las filas dinámicamente -->
+        	    <tbody id="authorized-table-body"></tbody>
+    		</table>
+	    </div>
+
 
         <div class="dynamic-section" id="responses-window">
             <div class="section-header">
@@ -1227,75 +1228,106 @@ async function saveAuthorizedPerson(e) {
 
 
 
-function renderAuthorizedTable() {
+// 1. FUNCIÓN: Cargar y renderizar el personal desde MySQL
+async function renderAuthorizedTable() {
     const tableBody = document.getElementById('authorized-table-body');
+    if (!tableBody) return;
+    
     tableBody.innerHTML = ''; // Limpiar la tabla antes de rellenar
 
-    const authPersons = JSON.parse(localStorage.getItem('authorizedPersons')) || [];
-
-    authPersons.forEach(person => {
-        const row = document.createElement('tr');
-
-        // Celda 1: RFC
-        const rfcCell = document.createElement('td');
-        rfcCell.textContent = person.rfc;
-        row.appendChild(rfcCell);
-
-        // Celda 2: Nombre
-        const nameCell = document.createElement('td');
-        nameCell.textContent = person.name;
-        row.appendChild(nameCell);
-
-        // Celda 3: Botón de eliminación
-        const actionCell = document.createElement('td');
-        const deleteButton = document.createElement('button');
-        deleteButton.textContent = 'Eliminar';
-        deleteButton.className = 'btn-delete'; // Clase para darle estilos CSS
+    try {
+        // Consultamos la lista de empleados a tu servidor en Render
+        const response = await fetch(`${BASE_URL}/api/doctors`);
         
-        // Vinculamos la función de eliminar al hacer click pasando el RFC actual
-        deleteButton.addEventListener('click', () => deleteAuthorizedPerson(person.rfc));
-        
-        actionCell.appendChild(deleteButton);
-        row.appendChild(actionCell);
+        if (!response.ok) {
+            throw new Error('No se pudo conectar con el servidor para cargar la tabla.');
+        }
 
-        // Insertar la fila completa en la tabla
-        tableBody.appendChild(row);
-    });
+        const authPersons = await response.json();
+
+        if (authPersons.length === 0) {
+            const emptyRow = document.createElement('tr');
+            const emptyCell = document.createElement('td');
+            emptyCell.colSpan = 3;
+            emptyCell.textContent = 'No hay personal registrado en el sistema.';
+            emptyCell.style.textAlign = 'center';
+            emptyCell.style.color = '#777';
+            emptyRow.appendChild(emptyCell);
+            tableBody.appendChild(emptyRow);
+            return;
+        }
+
+        // Recorremos los registros devueltos por la base de datos
+        authPersons.forEach(person => {
+            const row = document.createElement('tr');
+
+            // Celda 1: RFC
+            const rfcCell = document.createElement('td');
+            rfcCell.textContent = person.rfc;
+            row.appendChild(rfcCell);
+
+            // Celda 2: Nombre
+            const nameCell = document.createElement('td');
+            nameCell.textContent = person.name;
+            row.appendChild(nameCell);
+
+            // Celda 3: Botón de eliminación
+            const actionCell = document.createElement('td');
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Eliminar';
+            deleteButton.className = 'btn-delete'; // Mantiene tu clase CSS original
+            
+            // Vinculamos la función de eliminar al hacer click pasando el RFC real de la BD
+            deleteButton.addEventListener('click', () => deleteAuthorizedPerson(person.rfc));
+            
+            actionCell.appendChild(deleteButton);
+            row.appendChild(actionCell);
+
+            // Insertar la fila completa en la tabla
+            tableBody.appendChild(row);
+        });
+
+    } catch (error) {
+        console.error('Error en renderAuthorizedTable:', error);
+        const errorRow = document.createElement('tr');
+        const errorCell = document.createElement('td');
+        errorCell.colSpan = 3;
+        errorCell.textContent = 'Error al conectar con la base de datos de personal.';
+        errorCell.style.textAlign = 'center';
+        errorCell.style.color = '#e74c3c';
+        errorRow.appendChild(errorCell);
+        tableBody.appendChild(errorRow);
+    }
 }
 
-
-
-
-
-
-
-function deleteAuthorizedPerson(rfc) {
-    // 1. Confirmar si realmente se desea eliminar
-    if (!confirm(`¿Estás seguro de que deseas eliminar al usuario con RFC: ${rfc}?`)) {
-        return;
+// 2. FUNCIÓN: Procesar el borrado de un empleado en la nube
+async function deleteAuthorizedPerson(rfc) {
+    if (!confirm(`¿Está seguro de que desea eliminar al usuario con RFC: ${rfc}?`)) {
+        return; // Cancela la acción si no confirma
     }
 
-    // 2. Obtener la lista actual de localStorage
-    let authPersons = JSON.parse(localStorage.getItem('authorizedPersons')) || [];
+    try {
+        // Petición DELETE a tu ruta de Render
+        const response = await fetch(`${BASE_URL}/api/doctors/${rfc}`, {
+            method: 'DELETE'
+        });
 
-    // 3. Filtrar la lista para excluir al usuario con el RFC seleccionado
-    const originalLength = authPersons.length;
-    authPersons = authPersons.filter(person => person.rfc !== rfc);
+        const data = await response.json();
 
-    // 4. Verificar si realmente se encontró y eliminó al usuario
-    if (authPersons.length === originalLength) {
-        alert("No se encontró ningún usuario con ese RFC.");
-        return;
+        if (!response.ok) {
+            throw new Error(data.message || 'No se pudo eliminar al usuario de la base de datos.');
+        }
+
+        alert("Personal eliminado con éxito.");
+        
+        // Volvemos a pintar la tabla para reflejar el cambio de inmediato
+        renderAuthorizedTable();
+
+    } catch (error) {
+        alert(error.message);
+        console.error('Error en deleteAuthorizedPerson:', error);
     }
-
-    // 5. Guardar la nueva lista limpia en localStorage
-    localStorage.setItem('authorizedPersons', JSON.stringify(authPersons));
-
-    // 6. Actualizar la interfaz de usuario
-    renderAuthorizedTable();
-    alert("Usuario eliminado con éxito.");
 }
-
 
 
 
