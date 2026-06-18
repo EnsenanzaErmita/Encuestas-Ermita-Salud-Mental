@@ -52,26 +52,30 @@ handleDisconnect();
 // 3. RUTAS DE LA API
 // =========================================================================
 
-// RUTA API: Obtener la lista de todos los doctores
+// RUTA API: Obtener la lista de todos los empleados (Antes doctors)
 app.get('/api/doctors', (req, res) => {
-    const sql = 'SELECT rfc, name FROM doctors ORDER BY name ASC';
+    // CAMBIO: Ahora consulta a la tabla employees
+    const sql = 'SELECT rfc, name FROM employees ORDER BY name ASC';
     db.query(sql, (err, results) => {
         if (err) {
-            console.error('Error al consultar doctores:', err);
+            console.error('Error al consultar empleados:', err);
             return res.status(500).json({ message: 'Error al obtener los datos.' });
         }
         res.status(200).json(results);
     });
 });
 
-// RUTA API: Guardar doctores
+
+
+// RUTA API: Guardar empleados (Antes doctors)
 app.post('/api/doctors', (req, res) => {
     const { rfc, name } = req.body;
     if (!rfc || !name) {
         return res.status(400).json({ message: 'El nombre y el RFC son campos obligatorios.' });
     }
 
-    const checkSql = 'SELECT * FROM doctors WHERE rfc = ?';
+    // CAMBIO: Ahora verifica en la tabla employees
+    const checkSql = 'SELECT * FROM employees WHERE rfc = ?';
     db.query(checkSql, [rfc], (err, results) => {
         if (err) {
             console.error('Error al buscar RFC:', err);
@@ -81,16 +85,18 @@ app.post('/api/doctors', (req, res) => {
             return res.status(400).json({ message: 'Este RFC ya se encuentra registrado en el sistema.' });
         }
 
-        const insertSql = 'INSERT INTO doctors (rfc, name) VALUES (?, ?)';
+        // CAMBIO: Ahora inserta en la tabla employees
+        const insertSql = 'INSERT INTO employees (rfc, name) VALUES (?, ?)';
         db.query(insertSql, [rfc, name], (err, result) => {
             if (err) {
-                console.error('Error al insertar doctor:', err);
+                console.error('Error al insertar empleado:', err);
                 return res.status(500).json({ message: 'No se pudieron guardar los datos.' });
             }
-            res.status(201).json({ message: 'Doctor guardado correctamente.' });
+            res.status(201).json({ message: 'Personal guardado correctamente.' });
         });
     });
 });
+
 
 // RUTA API: Guardar o actualizar la meta mensual
 app.post('/api/goals', (req, res) => {

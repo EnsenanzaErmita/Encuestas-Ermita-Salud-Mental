@@ -1541,35 +1541,35 @@ async function saveAndShowResults() {
 
 
 
-// Llena dinámicamente el selector con los médicos registrados en la base de datos
+// Llena dinámicamente el selector con el personal registrado en la base de datos
 async function populateAssistantSelect() {
     const selectElement = document.getElementById('auth-person-select');
     if (!selectElement) return;
 
     try {
-        // Consultamos la lista de doctores a tu servidor en Render
+        // Consultamos la lista de empleados a tu servidor en Render
         const response = await fetch(`${BASE_URL}/api/doctors`);
         
         if (!response.ok) {
-            throw new Error('No se pudo obtener la lista de médicos.');
+            throw new Error('No se pudo obtener la lista de personal.');
         }
 
-        const doctors = await response.json();
+        const employees = await response.json();
 
         // Limpiamos las opciones previas y dejamos solo la opción por defecto
         selectElement.innerHTML = '<option value="">-- Selecciona Personal Autorizado --</option>';
 
-        // Si no hay médicos registrados en MySQL, avisamos visualmente
-        if (doctors.length === 0) {
-            selectElement.innerHTML = '<option value="">No hay médicos registrados en el sistema</option>';
+        // Si no hay personal registrado en MySQL, avisamos visualmente
+        if (employees.length === 0) {
+            selectElement.innerHTML = '<option value="">No hay personal registrado en el sistema</option>';
             return;
         }
 
-        // Recorremos los médicos de la BD y los agregamos al elemento select del HTML
-        doctors.forEach(doctor => {
+        // Recorremos los empleados de la BD y los agregamos al elemento select del HTML
+        employees.forEach(person => {
             const option = document.createElement('option');
-            option.value = doctor.rfc; // El valor interno será el RFC
-            option.text = `${doctor.name} (${doctor.rfc})`; // Lo que ve el usuario en pantalla
+            option.value = person.name; // IMPORTANTE: Guardamos el nombre como valor para que coincida con tu submitStorageOption()
+            option.text = `${person.name} (${person.rfc})`; // Lo que ve el usuario en pantalla
             selectElement.appendChild(option);
         });
 
