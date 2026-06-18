@@ -762,6 +762,19 @@ table td:last-child {
                     </form>
                 </div>
 
+                <div class="admin-box-panel">
+                    <h3><i class="fa-solid fa-trash-can"></i> Control de Vaciado de Encuestas</h3>
+                    <div class="form-group">
+                        <label for="allow-delete-select">¿Habilitar eliminación de todas las encuestas?</label>
+                        <select id="allow-delete-select" class="form-input" onchange="toggleDeleteOption(this.value)">
+                            <option value="No">No</option>
+                            <option value="Si">Sí</option>
+                        </select>
+                    </div>
+                    <button id="btn-delete-surveys" class="btn-danger" onclick="clearAllSurveys()" disabled>
+                        <i class="fa-solid fa-triangle-exclamation"></i> Eliminar Todas las Encuestas
+                    </button>
+                </div>
             </div>
 
 	    <h3 style="margin-top: 35px; margin-bottom: 15px;">Personal Registrado</h3>
@@ -1034,6 +1047,28 @@ async function saveMonthlyGoal(e) {
             }
         }
 
+        // Ejecutar borrado masivo seguro de encuestas
+        function clearAllSurveys() {
+            const currentPermission = localStorage.getItem('allowDeleteAllSurveys');
+            if (currentPermission !== 'Si') {
+                alert("Operación prohibida. La opción está deshabilitada en el selector.");
+                return;
+            }
+
+            const firstConfirm = confirm("⚠️ ¿Está seguro de que desea eliminar permanentemente TODAS las encuestas registradas en el sistema?");
+            if (firstConfirm) {
+                const secondConfirm = confirm("🛑 ¡Esta acción borrará el historial global e invalidará los contadores actuales! ¿Desea continuar?");
+                if (secondConfirm) {
+                    localStorage.setItem('surveyResponses', JSON.stringify([]));
+                    updateAllCounters();
+                    
+                    document.getElementById('allow-delete-select').value = 'No';
+                    toggleDeleteOption('No');
+                    
+                    alert("Todas las encuestas han sido eliminadas del historial.");
+                }
+            }
+        }
 
         // Calcula y dibuja la semaforización en la sección respuestas
         function calculateResponsesSemaphore() {
