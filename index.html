@@ -1209,6 +1209,9 @@ async function saveAuthorizedPerson(e) {
         rfcInput.value = '';
         nameInput.value = '';
         
+	// 2. ¡ESTA ES LA LÍNEA CLAVE! Refresca la tabla en tiempo real
+        await renderAuthorizedTable();
+
         // renderAuthorizedTable(); // Descomenta si adaptas esta función para leer de la BD
         alert("Persona autorizada guardada con éxito en la base de datos.");
 
