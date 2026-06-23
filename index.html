@@ -1167,13 +1167,16 @@ async function saveMonthlyGoal(e) {
 
 
 
+// 1. Asegúrate de tener declarada tu URL base oficial de Render si no existe arriba
+const BASE_URL = 'https://encuestas-ermita-salud-mental.onrender.com';
+
 async function accessResponses() {
     const pass = prompt("Ingrese su contraseña (RFC autorizado o clave de Administrador):");
-    if (pass === null) return; 
+    if (pass === null) return; // Si el usuario cancela
 
     try {
-        // Aseguramos la ruta absoluta basada en el dominio actual del navegador
-        const urlEndpoint = `${window.location.origin}/api/v1/auth`;
+        // CORRECCIÓN DE RAÍZ: Apuntamos directamente al backend oficial en Render usando POST
+        const urlEndpoint = `${BASE_URL}/api/v1/auth`;
 
         const response = await fetch(urlEndpoint, {
             method: 'POST',
@@ -1184,20 +1187,12 @@ async function accessResponses() {
             body: JSON.stringify({ pass: pass })
         });
 
-        // VALIDACIÓN CLAVE: Si el servidor no responde con JSON, capturamos el texto para ver el error real
-        const contentType = response.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-            const textError = await response.text();
-            console.error("El servidor no devolvió JSON. Devolvió:", textError);
-            alert("Error interno: El servidor respondió con un formato incorrecto (HTML/Texto).");
-            return;
-        }
-
         const data = await response.json();
 
         if (response.ok && data.authorized) {
             hideAllSections();
             
+            // Pasamos las respuestas devueltas por el servidor a tus tablas
             calculateResponsesSemaphore(data.responses); 
             renderResponsesTable(data.responses);
             renderMonthlySummaryTable(data.responses); 
@@ -1208,7 +1203,7 @@ async function accessResponses() {
         }
     } catch (error) {
         console.error("Detalle del error de conexión:", error);
-        alert("Error de conexión con el servidor. Revisa la consola del navegador (F12) para ver el detalle.");
+        alert("Error de conexión con el servidor. No se pudo validar el acceso.");
     }
 }
 
