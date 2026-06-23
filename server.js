@@ -72,7 +72,7 @@ app.post('/api/v1/auth', (req, res) => {
             }
             return res.status(200).json({
                 authorized: true,
-                responses: responsesResults
+                responses: responsesResults || []
             });
         });
     };
@@ -88,7 +88,7 @@ app.post('/api/v1/auth', (req, res) => {
             return res.status(500).json({ authorized: false, message: 'Error interno al validar credenciales.' });
         }
 
-        if (employeeResults.length > 0) {
+        if (employeeResults && employeeResults.length > 0) {
             return fetchSurveyResponses();
         } else {
             return res.status(401).json({ authorized: false, message: 'Acceso denegado. No es un Administrador o RFC Autorizado.' });
@@ -121,7 +121,7 @@ app.post('/api/doctors', (req, res) => {
             console.error('Error al buscar RFC:', err);
             return res.status(500).json({ message: 'Error interno en el servidor.' });
         }
-        if (results.length > 0) {
+        if (results && results.length > 0) {
             return res.status(400).json({ message: 'Este RFC ya se encuentra registrado en el sistema.' });
         }
 
@@ -189,7 +189,7 @@ app.post('/api/surveys', (req, res) => {
     });
 });
 
-// RUTA API: Obtener estadísticas y contadores unificados (CORREGIDA Y CERRADA)
+// RUTA API: Obtener estadísticas y contadores unificados (REPARADA)
 app.get('/api/stats', (req, res) => {
     const hoy = new Date();
     const anio = hoy.getFullYear();
@@ -213,12 +213,13 @@ app.get('/api/stats', (req, res) => {
             return res.status(500).json({ message: 'Error interno en el servidor.' });
         }
 
+        // CORRECCIÓN: Extraemos de forma segura el objeto de la primera posición del array de filas
         const stats = (results && results.length > 0) ? results[0] : {
             globalTabaco: 0, globalAlcohol: 0, globalAdicciones: 0,
             monthTabaco: 0, monthAlcohol: 0, monthAdicciones: 0, savedGoal: 0
         };
 
-        if (stats.savedGoal === null) {
+        if (stats.savedGoal === null || stats.savedGoal === undefined) {
             stats.savedGoal = 0;
         }
 
