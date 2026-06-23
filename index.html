@@ -1210,28 +1210,27 @@ async function accessResponses() {
             body: JSON.stringify({ clave: pass.trim() }) // Evita errores por espacios accidentales
         });
         
-        if (response.ok) {
-            const resultado = await response.json();
-            const datosEncuestas = resultado.surveys; // Recibe el arreglo directo de MySQL
+        // ... dentro de tu función accessResponses(), cuando response.ok es verdadero:
+if (response.ok) {
+    const resultado = await response.json();
+    
+    // 🔍 LÍNEAS DE DEPURACIÓN CRÍTICAS
+    console.log("1. ¿Qué mandó el servidor completo?:", resultado);
+    console.log("2. Arreglo de encuestas extraído:", resultado.surveys);
 
-            // PAsO 1: Ocultamos todas las secciones usando tu función existente
-            hideAllSections();
-            
-            // PASO 2: Inyectamos los datos reales en las tablas de inmediato
-            renderResponsesTable(datosEncuestas);
-            renderMonthlySummaryTable(datosEncuestas); 
-            calculateResponsesSemaphore(datosEncuestas); 
-            
-            // PASO 3: Encendemos los contenedores necesarios anulando el 'none'
-            if (document.getElementById('main-header')) {
-                document.getElementById('main-header').style.display = 'block';
-            }
-            
-            if (document.getElementById('responses-window')) {
-                document.getElementById('responses-window').style.display = 'block';
-            }
-            
-        } else {
+    const datosEncuestas = resultado.surveys; 
+
+    hideAllSections();
+    
+    // Forzamos el dibujo
+    renderResponsesTable(datosEncuestas);
+    renderMonthlySummaryTable(datosEncuestas); 
+    calculateResponsesSemaphore(datosEncuestas); 
+    
+    // Encendemos el contenedor básico
+    document.getElementById('responses-window').style.display = 'block';
+}
+ else {
             alert("Acceso denegado. No es un Administrador o RFC Autorizado.");
         }
 
