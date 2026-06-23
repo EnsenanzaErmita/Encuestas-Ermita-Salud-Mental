@@ -1,5 +1,6 @@
 // Cambios 1
 // Cambios 2
+// Cambios 4
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
@@ -57,6 +58,7 @@ handleDisconnect();
 
 
 
+
 // NUEVA RUTA: Validar acceso de Administrador o Empleado Autorizado (RFC)
 app.post('/api/validar-acceso', (req, res) => {
     const { clave } = req.body;
@@ -71,10 +73,10 @@ app.post('/api/validar-acceso', (req, res) => {
         return res.status(200).json({ autorizado: true });
     }
 
-    // 2. Limpiar el RFC ingresado por el usuario
+    // 2. Limpiar rigurosamente el texto que ingresó el usuario
     const rfcUsuario = clave.toUpperCase().trim();
 
-    // 3. Buscar el RFC en la tabla employees
+    // 3. Consulta exacta sin duplicados ni errores de sintaxis
     const sql = 'SELECT rfc FROM employees WHERE UPPER(rfc) = ? LIMIT 1';
     
     db.query(sql, [rfcUsuario], (err, results) => {
@@ -83,17 +85,16 @@ app.post('/api/validar-acceso', (req, res) => {
             return res.status(500).json({ autorizado: false, mensaje: 'Error interno en el servidor.' });
         }
 
-        // Convertimos el resultado a texto para inspeccionarlo sin importar cómo lo devuelva mysql2
-        const coincidenciaTexto = JSON.stringify(results);
-
-        // Si el texto de la respuesta contiene el RFC que buscamos, el acceso es correcto
-        if (coincidenciaTexto.includes(rfcUsuario)) {
+        // Verificamos si la consulta devolvió al menos un registro válido
+        if (results && results.length > 0) {
             return res.status(200).json({ autorizado: true });
         } else {
             return res.status(401).json({ autorizado: false, mensaje: 'Acceso denegado.' });
         }
     });
 });
+
+
 
 
 
