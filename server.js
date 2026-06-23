@@ -1,3 +1,4 @@
+// Cambios 1
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
@@ -57,7 +58,7 @@ handleDisconnect();
 // NUEVA RUTA: Validar acceso de Administrador o Empleado Autorizado (RFC)
 app.post('/api/validar-acceso', (req, res) => {
     const { clave } = req.body;
-    const ADMIN_PASSWORD = "ViperMístico"; // Manten tu contraseña real aquí
+    const ADMIN_PASSWORD = "ViperMístico"; // Asegúrate de mantener tu contraseña real
 
     if (!clave) {
         return res.status(400).json({ autorizado: false, mensaje: 'La clave es requerida.' });
@@ -68,18 +69,21 @@ app.post('/api/validar-acceso', (req, res) => {
         return res.status(200).json({ autorizado: true });
     }
 
-    // 2. Si no es admin, buscar el RFC en la tabla employees
-    const sql = 'SELECT * FROM employees WHERE UPPER(rfc) = ? LIMIT 1';
-    db.query(sql, [clave.toUpperCase().trim()], (err, results) => {
+    // 2. Si no es admin, limpiar el texto entrante
+    const rfcLimpio = clave.toUpperCase().trim();
+
+    // CORRECCIÓN: Usamos TRIM() tanto en la columna de la BD como en el valor enviado
+    // Esto remueve cualquier espacio invisible que Clever Cloud o MySQL hayan autocompletado
+    const sql = 'SELECT * FROM employees WHERE TRIM(UPPER(rfc)) = ? LIMIT 1';
+    
+    db.query(sql, [rfcLimpio], (err, results) => {
         if (err) {
             console.error('Error al validar acceso en MySQL:', err);
             return res.status(500).json({ autorizado: false, mensaje: 'Error interno en el servidor.' });
         }
 
-        // CORRECCIÓN: Validamos de forma segura tanto para arreglos simples como para respuestas anidadas de mysql2
-        const filas = Array.isArray(results[0]) ? results[0] : results;
-
-        if (filas && filas.length > 0) {
+        // Validación segura de filas obtenidas
+        if (results && results.length > 0) {
             return res.status(200).json({ autorizado: true });
         } else {
             return res.status(401).json({ autorizado: false, mensaje: 'Acceso denegado.' });
