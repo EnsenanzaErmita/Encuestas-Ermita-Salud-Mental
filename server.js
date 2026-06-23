@@ -48,9 +48,60 @@ function handleDisconnect() {
 // Inicializamos la conexión automática
 handleDisconnect();
 
+// Configuración de la clave de Administrador (puedes cambiar "Admin123*" por tu clave preferida o usar variables de entorno en Render)
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin123*";
+
 // =========================================================================
 // 3. RUTAS DE LA API
 // =========================================================================
+
+// NUEVA RUTA API: Autenticar por RFC o Admin y extraer respuestas de Clever Cloud
+app.post('/api/auth-responses', (req, res) => {
+    const { pass } = req.body;
+
+    if (!pass) {
+        return res.status(400).json({ authorized: false, message: 'Contraseña o RFC requerido.' });
+    }
+
+    const cleanPass = pass.trim().toUpperCase();
+
+    // Función interna para extraer los datos si la persona está autorizada
+    const fetchSurveyResponses = () => {
+        const sqlResponses = 'SELECT id, keyCategory, timestamp, diagnostic, assistant FROM survey_responses ORDER BY timestamp DESC';
+        db.query(sqlResponses, (err, responsesResults) => {
+            if (err) {
+                console.error('Error al consultar respuestas de encuestas:', err);
+                return res.status(500).json({ authorized: false, message: 'Error al extraer respuestas de la base de datos.' });
+            }
+            return res.status(200).json({
+                authorized: true,
+                responses: responsesResults
+            });
+        });
+    };
+
+    // Caso 1: Es la clave de Administrador
+    if (cleanPass === ADMIN_PASSWORD.toUpperCase()) {
+        return fetchSurveyResponses();
+    }
+
+    // Caso 2: No es admin, verificamos si es un RFC en la tabla 'employees'
+    const sqlCheckRFC = 'SELECT id FROM employees WHERE UPPER(rfc) = ?';
+    db.query(sqlCheckRFC, [cleanPass], (err, employeeResults) => {
+        if (err) {
+            console.error('Error al validar el RFC en la base de datos:', err);
+            return res.status(500).json({ authorized: false, message: 'Error interno al validar credenciales.' });
+        }
+
+        if (employeeResults.length > 0) {
+            // El RFC existe y está autorizado
+            return fetchSurveyResponses();
+        } else {
+            // No es admin ni un RFC registrado
+            return res.status(401).json({ authorized: false, message: 'Acceso denegado. No es un Administrador o RFC Autorizado.' });
+        }
+    });
+});
 
 // RUTA API: Obtener la lista de todos los empleados (Antes doctors)
 app.get('/api/doctors', (req, res) => {
@@ -64,8 +115,6 @@ app.get('/api/doctors', (req, res) => {
         res.status(200).json(results);
     });
 });
-
-
 
 // RUTA API: Guardar empleados (Antes doctors)
 app.post('/api/doctors', (req, res) => {
@@ -97,10 +146,6 @@ app.post('/api/doctors', (req, res) => {
     });
 });
 
-
-
-
-
 // RUTA API: Eliminar un empleado por su RFC
 app.delete('/api/doctors/:rfc', (req, res) => {
     const { rfc } = req.params;
@@ -114,17 +159,6 @@ app.delete('/api/doctors/:rfc', (req, res) => {
         res.status(200).json({ message: 'Usuario eliminado correctamente.' });
     });
 });
-
-
-
-
-
-
-
-
-
-
-
 
 // RUTA API: Guardar o actualizar la meta mensual
 app.post('/api/goals', (req, res) => {
@@ -210,6 +244,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// 5. ARRANCAR EL SERVIDOR
 // 5. ARRANCAR EL SERVIDOR
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
