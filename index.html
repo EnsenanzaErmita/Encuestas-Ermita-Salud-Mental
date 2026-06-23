@@ -1650,34 +1650,76 @@ async function populateAssistantSelect() {
 
 
 
-// NUEVO: Generar tabla agregada con contadores desglosados por mes y año desde MySQL
+
+
+
+async function renderResponsesTable() {
+    const tbody = document.getElementById('responses-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="4" class="empty-message">Cargando respuestas desde el servidor...</td></tr>`;
+
+    try {
+        const response = await fetch('https://onrender.com');
+        if (!response.ok) throw new Error('Error en la respuesta del servidor.');
+
+        const rawData = await response.json();
+        
+        // CORRECCIÓN: Si mysql2 manda un arreglo anidado, extraemos las filas puras de forma segura
+        const responses = Array.isArray(rawData[0]) ? rawData[0] : rawData;
+
+        if (!responses || responses.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="empty-message">No se han completado encuestas todavía.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = responses.map(r => {
+            const fechaFormateada = r.timestamp ? new Date(r.timestamp).toLocaleDateString('es-MX') : 'No especificada';
+            const diagnostico = r.diagnostic || 'Sin diagnóstico';
+            
+            return `
+                <tr>
+                    <td>${fechaFormateada}</td>
+                    <td style="font-weight:600; text-transform: capitalize;">${r.keyCategory || 'General'}</td>
+                    <td>
+                        <span style="color: ${diagnostico.includes('Alto') ? 'var(--accent-alcohol)' : diagnostico.includes('Moderado') ? 'var(--accent-tabaco)' : 'var(--accent-adicciones)'}">
+                            ● ${diagnostico}
+                        </span>
+                    </td>
+                    <td>${r.assistant || 'No especificado'}</td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error('Error al renderizar la tabla de respuestas:', error);
+        tbody.innerHTML = `<tr><td colspan="4" class="empty-message" style="color: red;">Error al cargar las respuestas de la base de datos.</td></tr>`;
+    }
+}
+
 async function renderMonthlySummaryTable() {
     const tbody = document.getElementById('monthly-summary-table-body');
     if (!tbody) return;
 
     try {
-        // Consultamos las encuestas guardadas en tu servidor de Render
         const response = await fetch('https://onrender.com');
+        if (!response.ok) throw new Error('Error en la respuesta mensual.');
+
+        const rawData = await response.json();
         
-        if (!response.ok) {
-            throw new Error('No se pudieron obtener los datos mensuales del servidor.');
-        }
+        // CORRECCIÓN: Extraemos filas puras protegiendo contra arreglos dobles
+        const responses = Array.isArray(rawData[0]) ? rawData[0] : rawData;
 
-        const responses = await response.json();
-
-        if (responses.length === 0) {
+        if (!responses || responses.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" class="empty-message">No existen registros mensuales analizados.</td></tr>`;
             return;
         }
 
         const monthsNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-        
-        // Estructura contenedora indexada por "Año-Mes"
         const monthlyGroups = {};
 
         responses.forEach(r => {
-            if (!r.timestamp) return;
-            const rDate = new Date(r.timestamp);
+            // CORRECCIÓN: Si el registro no tiene fecha, le asignamos la fecha actual para evitar que la app se caiga
+            const rDate = r.timestamp ? new Date(r.timestamp) : new Date();
             const year = rDate.getFullYear();
             const monthIdx = rDate.getMonth();
             const groupKey = `${year}-${monthIdx.toString().padStart(2, '0')}`;
@@ -1692,16 +1734,13 @@ async function renderMonthlySummaryTable() {
                 };
             }
 
-            // Validamos contra las categorías exactas guardadas en la base de datos
             if (r.keyCategory === 'tabaquismo') monthlyGroups[groupKey].tabaquismo++;
             else if (r.keyCategory === 'alcoholismo') monthlyGroups[groupKey].alcoholismo++;
             else if (r.keyCategory === 'adicciones') monthlyGroups[groupKey].adicciones++;
         });
 
-        // Ordenar las claves de forma descendente (mes más reciente primero)
         const sortedKeys = Object.keys(monthlyGroups).sort((a, b) => b.localeCompare(a));
 
-        // Renderizar la tabla con tu diseño original intacto
         tbody.innerHTML = sortedKeys.map(key => {
             const group = monthlyGroups[key];
             const totalMonth = group.tabaquismo + group.alcoholismo + group.adicciones;
@@ -1718,7 +1757,7 @@ async function renderMonthlySummaryTable() {
 
     } catch (error) {
         console.error('Error al renderizar la tabla de resumen mensual:', error);
-        tbody.innerHTML = `<tr><td colspan="5" class="empty-message" style="color: red;">Error al conectar con el servidor.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-message" style="color: red;">Error al procesar el resumen mensual.</td></tr>`;
     }
 }
 
@@ -1727,60 +1766,6 @@ async function renderMonthlySummaryTable() {
 
 
 
-
-
-
-
-
-
-
-
-
-async function renderResponsesTable() {
-    const tbody = document.getElementById('responses-table-body');
-    
-    // Mostramos un mensaje temporal de carga
-    tbody.innerHTML = `<tr><td colspan="4" class="empty-message">Cargando respuestas desde el servidor...</td></tr>`;
-
-    try {
-        // Consultamos la lista completa de encuestas en tu servidor de Render
-        const response = await fetch('https://onrender.com');
-        
-        if (!response.ok) {
-            throw new Error('No se pudieron obtener las encuestas del servidor.');
-        }
-
-        const responses = await response.json();
-
-        if (responses.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" class="empty-message">No se han completado encuestas todavía.</td></tr>`;
-            return;
-        }
-
-        // Mapeamos los datos que vienen desde MySQL
-        tbody.innerHTML = responses.map(r => {
-            // Formateamos la fecha del timestamp para que se vea legible (DD/MM/AAAA)
-            const fechaFormateada = r.timestamp ? new Date(r.timestamp).toLocaleDateString('es-MX') : 'No especificada';
-            
-            return `
-                <tr>
-                    <td>${fechaFormateada}</td>
-                    <td style="font-weight:600; text-transform: capitalize;">${r.keyCategory}</td>
-                    <td>
-                        <span style="color: ${r.diagnostic.includes('Alto') ? 'var(--accent-alcohol)' : r.diagnostic.includes('Moderado') ? 'var(--accent-tabaco)' : 'var(--accent-adicciones)'}">
-                            ● ${r.diagnostic}
-                        </span>
-                    </td>
-                    <td>${r.assistant || 'No especificado'}</td>
-                </tr>
-            `;
-        }).join('');
-
-    } catch (error) {
-        console.error('Error al renderizar la tabla de respuestas:', error);
-        tbody.innerHTML = `<tr><td colspan="4" class="empty-message" style="color: red;">Error al conectar con el servidor.</td></tr>`;
-    }
-}
 
 
 
