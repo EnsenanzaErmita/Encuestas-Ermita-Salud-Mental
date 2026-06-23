@@ -54,9 +54,10 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin123*";
 // 3. RUTAS DE LA API
 // =========================================================================
 
-// NUEVA RUTA API: Autenticar por RFC o Admin y extraer respuestas de Clever Cloud
-app.post('/api/v1/auth', (req, res) => {
-    const { pass } = req.body;
+// BUSCA ESTA RUTA EN TU SERVER.JS Y REEMPLÁZALA POR COMPLETO:
+app.get('/api/v1/auth', (req, res) => {
+    // CAMBIO: Ahora leemos 'pass' desde req.query (Método GET)
+    const { pass } = req.query;
 
     if (!pass) {
         return res.status(400).json({ authorized: false, message: 'Contraseña o RFC requerido.' });
@@ -64,6 +65,7 @@ app.post('/api/v1/auth', (req, res) => {
 
     const cleanPass = pass.trim().toUpperCase();
 
+    // Función interna para extraer los datos si la persona está autorizada
     const fetchSurveyResponses = () => {
         const sqlResponses = 'SELECT id, keyCategory, timestamp, diagnostic, assistant FROM survey_responses ORDER BY timestamp DESC';
         db.query(sqlResponses, (err, responsesResults) => {
@@ -78,10 +80,12 @@ app.post('/api/v1/auth', (req, res) => {
         });
     };
 
+    // Caso 1: Es la clave de Administrador
     if (cleanPass === ADMIN_PASSWORD.toUpperCase()) {
         return fetchSurveyResponses();
     }
 
+    // Caso 2: No es admin, verificamos si es un RFC en la tabla 'employees'
     const sqlCheckRFC = 'SELECT id FROM employees WHERE UPPER(rfc) = ?';
     db.query(sqlCheckRFC, [cleanPass], (err, employeeResults) => {
         if (err) {

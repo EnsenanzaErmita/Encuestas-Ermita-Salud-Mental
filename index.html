@@ -1167,19 +1167,20 @@ async function saveMonthlyGoal(e) {
 
 
 
-// 1. Asegúrate de tener declarada tu URL base oficial de Render si no existe arriba
+// 1. URL base oficial de tu backend en Render para este proyecto
 const BASE_URL = 'https://encuestas-ermita-salud-mental.onrender.com';
 
 async function accessResponses() {
     const pass = prompt("Ingrese su contraseña (RFC autorizado o clave de Administrador):");
-    if (pass === null) return; // Si el usuario cancela
+    if (pass === null) return; // Si el usuario presiona cancelar
 
     try {
-        // CORRECCIÓN DE RAÍZ: Apuntamos directamente al backend oficial en Render usando POST
+        // Apuntamos directamente al endpoint POST en Render
         const urlEndpoint = `${BASE_URL}/api/v1/auth`;
 
         const response = await fetch(urlEndpoint, {
             method: 'POST',
+            mode: 'cors', // 👈 CLAVE: Obliga al navegador a saltar el Nginx estático e ir directo a Render
             headers: { 
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
@@ -1187,12 +1188,21 @@ async function accessResponses() {
             body: JSON.stringify({ pass: pass })
         });
 
+        // Verificación de seguridad por si el servidor intermediario responde con texto/HTML
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            const textError = await response.text();
+            console.error("El servidor no devolvió JSON. Devolvió:", textError);
+            alert("Error de red: La petición fue interceptada por el hosting estático. Revisa la consola.");
+            return;
+        }
+
         const data = await response.json();
 
         if (response.ok && data.authorized) {
             hideAllSections();
             
-            // Pasamos las respuestas devueltas por el servidor a tus tablas
+            // Enviamos las respuestas dinámicas extraídas de Clever Cloud
             calculateResponsesSemaphore(data.responses); 
             renderResponsesTable(data.responses);
             renderMonthlySummaryTable(data.responses); 
@@ -1206,7 +1216,6 @@ async function accessResponses() {
         alert("Error de conexión con el servidor. No se pudo validar el acceso.");
     }
 }
-
 
 
 
