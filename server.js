@@ -5,9 +5,10 @@ const path = require('path');
 
 const app = express();
 
-// 1. MIDDLEWARES DE PARSEO (Configurados al principio)
+// 1. MIDDLEWARES DE PARSEO
 app.use(cors({ origin: '*' }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // 2. CONFIGURACIÓN DE BASE DE DATOS ADAPTATIVA (CLEVER CLOUD)
 const dbConfig = {
@@ -21,23 +22,22 @@ const dbConfig = {
 let db;
 
 function handleDisconnect() {
-    db = mysql.createConnection(dbConfig); // Crea una nueva conexión
+    db = mysql.createConnection(dbConfig); 
 
     db.connect(err => {
         if (err) {
             console.error('Error al reconectar a MySQL, reintentando en 2 segundos...', err);
-            setTimeout(handleDisconnect, 2000); // Si falla, espera 2 segundos y reintenta
+            setTimeout(handleDisconnect, 2000); 
         } else {
             console.log('¡Conexión exitosa y activa con la base de datos de Clever Cloud!');
         }
     });
 
-    // Si la base de datos cierra el canal por inactividad, atrapamos el error aquí
     db.on('error', err => {
         console.error('Se detectó un error en el nodo de MySQL:', err);
         if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET') {
             console.log('Conexión perdida con la nube. Iniciando reconexión automática...');
-            handleDisconnect(); // Reconectamos el servidor automáticamente
+            handleDisconnect(); 
         } else {
             throw err;
         }
@@ -47,15 +47,14 @@ function handleDisconnect() {
 // Inicializamos la conexión automática
 handleDisconnect();
 
-// Configuración de la clave de Administrador (puedes cambiar "Admin123*" por tu clave preferida o usar variables de entorno en Render)
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin123*";
 
 // =========================================================================
-// 3. RUTAS DE LA API (Deben ir arriba para que Express las procese primero)
+// 3. RUTAS DE LA API (Deben ir arriba de express.static)
 // =========================================================================
 
 // NUEVA RUTA API: Autenticar por RFC o Admin y extraer respuestas de Clever Cloud
-app.post('/api/auth-responses', (req, res) => {
+app.post('/api/v1/auth', (req, res) => {
     const { pass } = req.body;
 
     if (!pass) {
@@ -64,7 +63,6 @@ app.post('/api/auth-responses', (req, res) => {
 
     const cleanPass = pass.trim().toUpperCase();
 
-    // Función interna para extraer los datos si la persona está autorizada
     const fetchSurveyResponses = () => {
         const sqlResponses = 'SELECT id, keyCategory, timestamp, diagnostic, assistant FROM survey_responses ORDER BY timestamp DESC';
         db.query(sqlResponses, (err, responsesResults) => {
@@ -79,12 +77,10 @@ app.post('/api/auth-responses', (req, res) => {
         });
     };
 
-    // Caso 1: Es la clave de Administrador
     if (cleanPass === ADMIN_PASSWORD.toUpperCase()) {
         return fetchSurveyResponses();
     }
 
-    // Caso 2: No es admin, verificamos si es un RFC en la tabla 'employees'
     const sqlCheckRFC = 'SELECT id FROM employees WHERE UPPER(rfc) = ?';
     db.query(sqlCheckRFC, [cleanPass], (err, employeeResults) => {
         if (err) {
@@ -93,16 +89,14 @@ app.post('/api/auth-responses', (req, res) => {
         }
 
         if (employeeResults.length > 0) {
-            // El RFC existe y está autorizado
             return fetchSurveyResponses();
         } else {
-            // No es admin ni un RFC registrado
             return res.status(401).json({ authorized: false, message: 'Acceso denegado. No es un Administrador o RFC Autorizado.' });
         }
     });
 });
 
-// RUTA API: Obtener la lista de todos los empleados (Antes doctors)
+// RUTA API: Obtener la lista de todos los empleados
 app.get('/api/doctors', (req, res) => {
     const sql = 'SELECT rfc, name FROM employees ORDER BY name ASC';
     db.query(sql, (err, results) => {
@@ -114,7 +108,7 @@ app.get('/api/doctors', (req, res) => {
     });
 });
 
-// RUTA API: Guardar empleados (Antes doctors)
+// RUTA API: Guardar empleados
 app.post('/api/doctors', (req, res) => {
     const { rfc, name } = req.body;
     if (!rfc || !name) {
@@ -177,7 +171,7 @@ app.post('/api/goals', (req, res) => {
     });
 });
 
-// RUTA API: Guardar una nueva respuesta de encuesta con diagnóstico y asistente
+// RUTA API: Guardar una nueva respuesta de encuesta
 app.post('/api/surveys', (req, res) => {
     const { keyCategory, diagnostic, assistant } = req.body;
 
@@ -195,7 +189,7 @@ app.post('/api/surveys', (req, res) => {
     });
 });
 
-// RUTA API: Obtener estadísticas y contadores unificados
+// RUTA API: Obtener estadísticas y contadores unificados (CORREGIDA Y CERRADA)
 app.get('/api/stats', (req, res) => {
     const hoy = new Date();
     const anio = hoy.getFullYear();
@@ -233,15 +227,14 @@ app.get('/api/stats', (req, res) => {
 });
 
 // =========================================================================
-// 4. ARCHIVOS ESTÁTICOS Y RUTA PARA SERVIR EL HTML (Siempre abajo de la API)
+// 4. ARCHIVOS ESTÁTICOS Y RUTA HTML (Siempre abajo de todo)
 // =========================================================================
 app.use(express.static(__dirname)); 
 
-app.get('/', (req, res) => {
+app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// 5. ARRANCAR EL SERVIDOR
 // 5. ARRANCAR EL SERVIDOR
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
