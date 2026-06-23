@@ -5,10 +5,10 @@ const path = require('path');
 
 const app = express();
 
-// 1. MIDDLEWARES DE PARSEO
+// 1. MIDDLEWARES
 app.use(cors({ origin: '*' }));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.static(__dirname)); 
 
 // 2. CONFIGURACIÓN DE BASE DE DATOS ADAPTATIVA (CLEVER CLOUD)
 const dbConfig = {
@@ -189,7 +189,7 @@ app.post('/api/surveys', (req, res) => {
     });
 });
 
-// RUTA API: Obtener estadísticas y contadores unificados (REPARADA)
+// RUTA API: Obtener estadísticas y contadores unificados
 app.get('/api/stats', (req, res) => {
     const hoy = new Date();
     const anio = hoy.getFullYear();
@@ -213,7 +213,6 @@ app.get('/api/stats', (req, res) => {
             return res.status(500).json({ message: 'Error interno en el servidor.' });
         }
 
-        // CORRECCIÓN: Extraemos de forma segura el objeto de la primera posición del array de filas
         const stats = (results && results.length > 0) ? results[0] : {
             globalTabaco: 0, globalAlcohol: 0, globalAdicciones: 0,
             monthTabaco: 0, monthAlcohol: 0, monthAdicciones: 0, savedGoal: 0
@@ -232,7 +231,8 @@ app.get('/api/stats', (req, res) => {
 // =========================================================================
 app.use(express.static(__dirname)); 
 
-app.get('*', (req, res) => {
+// CORRECCIÓN AQUÍ: Se añade el parámetro de captura '(.*)' para que no rompa la librería 'path-to-regexp'
+app.get('/:any(.*)', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
