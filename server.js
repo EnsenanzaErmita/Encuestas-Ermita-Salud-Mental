@@ -9,7 +9,7 @@ const app = express();
 // 1. MIDDLEWARES
 app.use(cors({ origin: '*' }));
 app.use(express.json());
-app.use(express.static(__dirname)); 
+
 
 // 2. CONFIGURACIÓN DE BASE DE DATOS ADAPTATIVA (CLEVER CLOUD)
 const dbConfig = {
@@ -258,6 +258,8 @@ app.get('/api/stats', (req, res) => {
 // =========================================================================
 // 4. RUTA PARA SERVIR EL HTML (Abajo de la API)
 // =========================================================================
+app.use(express.static(__dirname)); 
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
