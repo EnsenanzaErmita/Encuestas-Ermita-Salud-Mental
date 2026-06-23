@@ -1714,29 +1714,50 @@ async function populateAssistantSelect() {
 
 
 
-function renderResponsesTable() {
+async function renderResponsesTable() {
     const tbody = document.getElementById('responses-table-body');
-    const responses = JSON.parse(localStorage.getItem('surveyResponses')) || [];
+    
+    // Mostramos un mensaje temporal de carga
+    tbody.innerHTML = `<tr><td colspan="4" class="empty-message">Cargando respuestas desde el servidor...</td></tr>`;
 
-    // Cambiado a colspan="4" para cubrir la nueva columna si no hay datos
-    if (responses.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="empty-message">No se han completado encuestas todavía.</td></tr>`;
-        return;
+    try {
+        // Consultamos la lista completa de encuestas en tu servidor de Render
+        const response = await fetch('https://onrender.com');
+        
+        if (!response.ok) {
+            throw new Error('No se pudieron obtener las encuestas del servidor.');
+        }
+
+        const responses = await response.json();
+
+        if (responses.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="empty-message">No se han completado encuestas todavía.</td></tr>`;
+            return;
+        }
+
+        // Mapeamos los datos que vienen desde MySQL
+        tbody.innerHTML = responses.map(r => {
+            // Formateamos la fecha del timestamp para que se vea legible (DD/MM/AAAA)
+            const fechaFormateada = r.timestamp ? new Date(r.timestamp).toLocaleDateString('es-MX') : 'No especificada';
+            
+            return `
+                <tr>
+                    <td>${fechaFormateada}</td>
+                    <td style="font-weight:600; text-transform: capitalize;">${r.keyCategory}</td>
+                    <td>
+                        <span style="color: ${r.diagnostic.includes('Alto') ? 'var(--accent-alcohol)' : r.diagnostic.includes('Moderado') ? 'var(--accent-tabaco)' : 'var(--accent-adicciones)'}">
+                            ● ${r.diagnostic}
+                        </span>
+                    </td>
+                    <td>${r.assistant || 'No especificado'}</td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error('Error al renderizar la tabla de respuestas:', error);
+        tbody.innerHTML = `<tr><td colspan="4" class="empty-message" style="color: red;">Error al conectar con el servidor.</td></tr>`;
     }
-
-    tbody.innerHTML = responses.map(r => `
-        <tr>
-            <td>${r.date}</td>
-            <td style="font-weight:600;">${r.category}</td>
-            <td>
-                <span style="color: ${r.diagnostic.includes('Alto') ? 'var(--accent-alcohol)' : r.diagnostic.includes('Moderado') ? 'var(--accent-tabaco)' : 'var(--accent-adicciones)'}">
-                    ● ${r.diagnostic}
-                </span>
-            </td>
-            <!-- NUEVA CELDA: Muestra el nombre de la persona seleccionada -->
-            <td>${r.assistant || 'No especificado'}</td>
-        </tr>
-    `).join('');
 }
 
 

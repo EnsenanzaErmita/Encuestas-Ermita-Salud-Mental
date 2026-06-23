@@ -198,6 +198,31 @@ app.post('/api/surveys', (req, res) => {
     });
 });
 
+
+
+// NUEVA RUTA API: Obtener todas las encuestas registradas para la tabla de administración
+app.get('/api/surveys', (req, res) => {
+    // Consultamos las encuestas ordenadas desde la más reciente a la más antigua
+    const sql = 'SELECT keyCategory, diagnostic, assistant, timestamp FROM survey_responses ORDER BY timestamp DESC';
+    
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error('Error al consultar encuestas en MySQL:', err);
+            return res.status(500).json({ message: 'Error interno al obtener los datos.' });
+        }
+        res.status(200).json(results);
+    });
+});
+
+
+
+
+
+
+
+
+
+
 // RUTA API: Obtener estadísticas y contadores unificados
 app.get('/api/stats', (req, res) => {
     const hoy = new Date();
