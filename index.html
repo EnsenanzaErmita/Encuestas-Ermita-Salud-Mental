@@ -1183,8 +1183,15 @@ async function accessResponses() {
         if (response.ok) {
             hideAllSections();
             calculateResponsesSemaphore(); 
-            renderResponsesTable();
-            renderMonthlySummaryTable(); 
+            
+            // CORRECCIÓN AQUÍ: Agregamos 'await' para forzar al navegador a esperar los datos de MySQL
+            await renderResponsesTable();
+            await renderMonthlySummaryTable(); 
+            
+            // Ahora sí, mostramos la ventana y el encabezado con los datos completamente renderizados
+            if (document.getElementById('main-header')) {
+                document.getElementById('main-header').style.display = 'block';
+            }
             document.getElementById('responses-window').style.display = 'block';
         } else {
             alert("Acceso denegado. No es un Administrador o RFC Autorizado.");
