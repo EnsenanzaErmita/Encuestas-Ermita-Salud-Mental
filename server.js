@@ -5,10 +5,9 @@ const path = require('path');
 
 const app = express();
 
-// 1. MIDDLEWARES
+// 1. MIDDLEWARES DE PARSEO (Configurados al principio)
 app.use(cors({ origin: '*' }));
 app.use(express.json());
-app.use(express.static(__dirname)); 
 
 // 2. CONFIGURACIÓN DE BASE DE DATOS ADAPTATIVA (CLEVER CLOUD)
 const dbConfig = {
@@ -52,7 +51,7 @@ handleDisconnect();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin123*";
 
 // =========================================================================
-// 3. RUTAS DE LA API
+// 3. RUTAS DE LA API (Deben ir arriba para que Express las procese primero)
 // =========================================================================
 
 // NUEVA RUTA API: Autenticar por RFC o Admin y extraer respuestas de Clever Cloud
@@ -105,7 +104,6 @@ app.post('/api/auth-responses', (req, res) => {
 
 // RUTA API: Obtener la lista de todos los empleados (Antes doctors)
 app.get('/api/doctors', (req, res) => {
-    // CAMBIO: Ahora consulta a la tabla employees
     const sql = 'SELECT rfc, name FROM employees ORDER BY name ASC';
     db.query(sql, (err, results) => {
         if (err) {
@@ -123,7 +121,6 @@ app.post('/api/doctors', (req, res) => {
         return res.status(400).json({ message: 'El nombre y el RFC son campos obligatorios.' });
     }
 
-    // CAMBIO: Ahora verifica en la tabla employees
     const checkSql = 'SELECT * FROM employees WHERE rfc = ?';
     db.query(checkSql, [rfc], (err, results) => {
         if (err) {
@@ -134,7 +131,6 @@ app.post('/api/doctors', (req, res) => {
             return res.status(400).json({ message: 'Este RFC ya se encuentra registrado en el sistema.' });
         }
 
-        // CAMBIO: Ahora inserta en la tabla employees
         const insertSql = 'INSERT INTO employees (rfc, name) VALUES (?, ?)';
         db.query(insertSql, [rfc, name], (err, result) => {
             if (err) {
@@ -223,7 +219,6 @@ app.get('/api/stats', (req, res) => {
             return res.status(500).json({ message: 'Error interno en el servidor.' });
         }
 
-        // Extraemos de forma segura el primer registro de la fila única
         const stats = (results && results.length > 0) ? results[0] : {
             globalTabaco: 0, globalAlcohol: 0, globalAdicciones: 0,
             monthTabaco: 0, monthAlcohol: 0, monthAdicciones: 0, savedGoal: 0
@@ -238,8 +233,10 @@ app.get('/api/stats', (req, res) => {
 });
 
 // =========================================================================
-// 4. RUTA PARA SERVIR EL HTML (Abajo de la API)
+// 4. ARCHIVOS ESTÁTICOS Y RUTA PARA SERVIR EL HTML (Siempre abajo de la API)
 // =========================================================================
+app.use(express.static(__dirname)); 
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
