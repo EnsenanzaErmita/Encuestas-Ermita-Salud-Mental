@@ -1203,7 +1203,7 @@ async function accessResponses() {
     if (pass === null || pass.trim() === "") return;
 
     try {
-        const response = await fetch('https://onrender.com', {
+        const response = await fetch('https://encuestas-ermita-salud-mental.onrender.com/api/validar-acceso', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ clave: pass })
