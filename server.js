@@ -1,5 +1,3 @@
-// VERSIÓN REPARADA DEL SERVIDOR - COMPILACIÓN LIMPIA
-// VERSIÓN REPARADA DEL SERVIDOR - COMPILACIÓN LIMPIA2
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
@@ -7,9 +5,10 @@ const path = require('path');
 
 const app = express();
 
-// 1. MIDDLEWARES DE PARSEO (Estrictamente al inicio)
+// 1. MIDDLEWARES
 app.use(cors({ origin: '*' }));
 app.use(express.json());
+app.use(express.static(__dirname)); 
 
 // 2. CONFIGURACIÓN DE BASE DE DATOS ADAPTATIVA (CLEVER CLOUD)
 const dbConfig = {
@@ -28,17 +27,18 @@ function handleDisconnect() {
     db.connect(err => {
         if (err) {
             console.error('Error al reconectar a MySQL, reintentando en 2 segundos...', err);
-            setTimeout(handleDisconnect, 2000); 
+            setTimeout(handleDisconnect, 2000); // Si falla, espera 2 segundos y reintenta
         } else {
             console.log('¡Conexión exitosa y activa con la base de datos de Clever Cloud!');
         }
     });
 
+    // Si la base de datos cierra el canal por inactividad, atrapamos el error aquí
     db.on('error', err => {
         console.error('Se detectó un error en el nodo de MySQL:', err);
         if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET') {
             console.log('Conexión perdida con la nube. Iniciando reconexión automática...');
-            handleDisconnect(); 
+            handleDisconnect(); // Reconectamos el servidor automáticamente
         } else {
             throw err;
         }
@@ -48,55 +48,36 @@ function handleDisconnect() {
 // Inicializamos la conexión automática
 handleDisconnect();
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin123*";
-
 // =========================================================================
 // 3. RUTAS DE LA API
 // =========================================================================
 
-// BUSCA ESTA RUTA EN TU SERVER.JS Y REEMPLÁZALA POR COMPLETO:
-app.get('/api/v1/auth', (req, res) => {
-    // CAMBIO: Ahora leemos 'pass' desde req.query (Método GET)
-    const { pass } = req.query;
+// NUEVA RUTA: Validar acceso de Administrador o Empleado Autorizado (RFC)
+app.post('/api/validar-acceso', (req, res) => {
+    const { clave } = req.body;
+    const ADMIN_PASSWORD = "ViperMístico"; // REEMPLAZA CON TU CONTRASEÑA REAL DE ADMIN
 
-    if (!pass) {
-        return res.status(400).json({ authorized: false, message: 'Contraseña o RFC requerido.' });
+    if (!clave) {
+        return res.status(400).json({ autorizado: false, mensaje: 'La clave es requerida.' });
     }
 
-    const cleanPass = pass.trim().toUpperCase();
-
-    // Función interna para extraer los datos si la persona está autorizada
-    const fetchSurveyResponses = () => {
-        const sqlResponses = 'SELECT id, keyCategory, timestamp, diagnostic, assistant FROM survey_responses ORDER BY timestamp DESC';
-        db.query(sqlResponses, (err, responsesResults) => {
-            if (err) {
-                console.error('Error al consultar respuestas de encuestas:', err);
-                return res.status(500).json({ authorized: false, message: 'Error al extraer respuestas de la base de datos.' });
-            }
-            return res.status(200).json({
-                authorized: true,
-                responses: responsesResults || []
-            });
-        });
-    };
-
-    // Caso 1: Es la clave de Administrador
-    if (cleanPass === ADMIN_PASSWORD.toUpperCase()) {
-        return fetchSurveyResponses();
+    // 1. Validar si coincide con la contraseña de Administrador
+    if (clave === ADMIN_PASSWORD) {
+        return res.status(200).json({ autorizado: true });
     }
 
-    // Caso 2: No es admin, verificamos si es un RFC en la tabla 'employees'
-    const sqlCheckRFC = 'SELECT id FROM employees WHERE UPPER(rfc) = ?';
-    db.query(sqlCheckRFC, [cleanPass], (err, employeeResults) => {
+    // 2. Si no es admin, buscar el RFC en la tabla employees
+    const sql = 'SELECT * FROM employees WHERE UPPER(rfc) = ? LIMIT 1';
+    db.query(sql, [clave.toUpperCase()], (err, results) => {
         if (err) {
-            console.error('Error al validar el RFC en la base de datos:', err);
-            return res.status(500).json({ authorized: false, message: 'Error interno al validar credenciales.' });
+            console.error('Error al validar acceso en MySQL:', err);
+            return res.status(500).json({ autorizado: false, mensaje: 'Error interno en el servidor.' });
         }
 
-        if (employeeResults && employeeResults.length > 0) {
-            return fetchSurveyResponses();
+        if (results.length > 0) {
+            return res.status(200).json({ autorizado: true });
         } else {
-            return res.status(401).json({ authorized: false, message: 'Acceso denegado. No es un Administrador o RFC Autorizado.' });
+            return res.status(401).json({ autorizado: false, mensaje: 'Acceso denegado.' });
         }
     });
 });
@@ -194,7 +175,7 @@ app.post('/api/surveys', (req, res) => {
     });
 });
 
-// RUTA API: Obtener estadísticas y contadores unificados (COMPLETA Y CERRADA)
+// RUTA API: Obtener estadísticas y contadores unificados
 app.get('/api/stats', (req, res) => {
     const hoy = new Date();
     const anio = hoy.getFullYear();
@@ -232,10 +213,8 @@ app.get('/api/stats', (req, res) => {
 });
 
 // =========================================================================
-// 4. CONFIGURACIÓN DE ARCHIVOS ESTÁTICOS Y SERVIR HTML (AL FINAL DE TODO)
+// 4. RUTA PARA SERVIR EL HTML (Abajo de la API)
 // =========================================================================
-app.use(express.static(__dirname)); 
-
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
