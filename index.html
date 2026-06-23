@@ -1659,7 +1659,7 @@ async function renderResponsesTable() {
     tbody.innerHTML = `<tr><td colspan="4" class="empty-message">Cargando respuestas desde el servidor...</td></tr>`;
 
     try {
-        const response = await fetch('https://onrender.com');
+        const response = await fetch('https://encuestas-ermita-salud-mental.onrender.com/api/surveys');
         if (!response.ok) throw new Error('Error en la respuesta del servidor.');
 
         const rawData = await response.json();
@@ -1701,7 +1701,7 @@ async function renderMonthlySummaryTable() {
     if (!tbody) return;
 
     try {
-        const response = await fetch('https://onrender.com');
+        const response = await fetch('https://encuestas-ermita-salud-mental.onrender.com/api/surveys');
         if (!response.ok) throw new Error('Error en la respuesta mensual.');
 
         const rawData = await response.json();
