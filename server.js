@@ -52,35 +52,43 @@ handleDisconnect();
 // 3. RUTAS DE LA API
 // =========================================================================
 
+
+
 // NUEVA RUTA: Validar acceso de Administrador o Empleado Autorizado (RFC)
 app.post('/api/validar-acceso', (req, res) => {
     const { clave } = req.body;
-    const ADMIN_PASSWORD = "ViperMístico"; // REEMPLAZA CON TU CONTRASEÑA REAL DE ADMIN
+    const ADMIN_PASSWORD = "ViperMístico"; // Manten tu contraseña real aquí
 
     if (!clave) {
         return res.status(400).json({ autorizado: false, mensaje: 'La clave es requerida.' });
     }
 
-    // 1. Validar si coincide con la contraseña de Administrador
+    // 1. Validar primero contra la contraseña del Administrador
     if (clave === ADMIN_PASSWORD) {
         return res.status(200).json({ autorizado: true });
     }
 
     // 2. Si no es admin, buscar el RFC en la tabla employees
     const sql = 'SELECT * FROM employees WHERE UPPER(rfc) = ? LIMIT 1';
-    db.query(sql, [clave.toUpperCase()], (err, results) => {
+    db.query(sql, [clave.toUpperCase().trim()], (err, results) => {
         if (err) {
             console.error('Error al validar acceso en MySQL:', err);
             return res.status(500).json({ autorizado: false, mensaje: 'Error interno en el servidor.' });
         }
 
-        if (results.length > 0) {
+        // CORRECCIÓN: Validamos de forma segura tanto para arreglos simples como para respuestas anidadas de mysql2
+        const filas = Array.isArray(results[0]) ? results[0] : results;
+
+        if (filas && filas.length > 0) {
             return res.status(200).json({ autorizado: true });
         } else {
             return res.status(401).json({ autorizado: false, mensaje: 'Acceso denegado.' });
         }
     });
 });
+
+
+
 
 // RUTA API: Obtener la lista de todos los empleados
 app.get('/api/doctors', (req, res) => {
