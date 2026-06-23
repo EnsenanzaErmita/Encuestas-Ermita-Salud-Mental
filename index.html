@@ -1650,66 +1650,88 @@ async function populateAssistantSelect() {
 
 
 
+// NUEVO: Generar tabla agregada con contadores desglosados por mes y año desde MySQL
+async function renderMonthlySummaryTable() {
+    const tbody = document.getElementById('monthly-summary-table-body');
+    if (!tbody) return;
 
+    try {
+        // Consultamos las encuestas guardadas en tu servidor de Render
+        const response = await fetch('https://onrender.com');
+        
+        if (!response.ok) {
+            throw new Error('No se pudieron obtener los datos mensuales del servidor.');
+        }
 
+        const responses = await response.json();
 
+        if (responses.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="empty-message">No existen registros mensuales analizados.</td></tr>`;
+            return;
+        }
 
+        const monthsNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        
+        // Estructura contenedora indexada por "Año-Mes"
+        const monthlyGroups = {};
 
+        responses.forEach(r => {
+            if (!r.timestamp) return;
+            const rDate = new Date(r.timestamp);
+            const year = rDate.getFullYear();
+            const monthIdx = rDate.getMonth();
+            const groupKey = `${year}-${monthIdx.toString().padStart(2, '0')}`;
 
-        // NUEVO: Generar tabla agregada con contadores desglosados por mes y año
-        function renderMonthlySummaryTable() {
-            const tbody = document.getElementById('monthly-summary-table-body');
-            const responses = JSON.parse(localStorage.getItem('surveyResponses')) || [];
-
-            if (responses.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="empty-message">No existen registros mensuales analizados.</td></tr>`;
-                return;
+            if (!monthlyGroups[groupKey]) {
+                monthlyGroups[groupKey] = {
+                    label: `${monthsNames[monthIdx]} / ${year}`,
+                    tabaquismo: 0,
+                    alcoholismo: 0,
+                    adicciones: 0,
+                    sortKey: groupKey
+                };
             }
 
-            const monthsNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-            
-            // Estructura contenedora indexada por "Año-Mes"
-            const monthlyGroups = {};
+            // Validamos contra las categorías exactas guardadas en la base de datos
+            if (r.keyCategory === 'tabaquismo') monthlyGroups[groupKey].tabaquismo++;
+            else if (r.keyCategory === 'alcoholismo') monthlyGroups[groupKey].alcoholismo++;
+            else if (r.keyCategory === 'adicciones') monthlyGroups[groupKey].adicciones++;
+        });
 
-            responses.forEach(r => {
-                if (!r.timestamp) return;
-                const rDate = new Date(r.timestamp);
-                const year = rDate.getFullYear();
-                const monthIdx = rDate.getMonth();
-                const groupKey = `${year}-${monthIdx.toString().padStart(2, '0')}`;
+        // Ordenar las claves de forma descendente (mes más reciente primero)
+        const sortedKeys = Object.keys(monthlyGroups).sort((a, b) => b.localeCompare(a));
 
-                if (!monthlyGroups[groupKey]) {
-                    monthlyGroups[groupKey] = {
-                        label: `${monthsNames[monthIdx]} / ${year}`,
-                        tabaquismo: 0,
-                        alcoholismo: 0,
-                        adicciones: 0,
-                        sortKey: groupKey
-                    };
-                }
+        // Renderizar la tabla con tu diseño original intacto
+        tbody.innerHTML = sortedKeys.map(key => {
+            const group = monthlyGroups[key];
+            const totalMonth = group.tabaquismo + group.alcoholismo + group.adicciones;
+            return `
+                <tr>
+                    <td style="font-weight: 600; color: var(--text-main);"><i class="fa-regular fa-calendar"></i> ${group.label}</td>
+                    <td style="font-weight: 700; color: var(--accent-tabaco);">${group.tabaquismo}</td>
+                    <td style="font-weight: 700; color: var(--accent-alcohol);">${group.alcoholismo}</td>
+                    <td style="font-weight: 700; color: var(--accent-adicciones);">${group.adicciones}</td>
+                    <td class="total-cell" style="text-align: center; font-size:1.1rem;">${totalMonth}</td>
+                </tr>
+            `;
+        }).join('');
 
-                if (r.keyCategory === 'tabaquismo') monthlyGroups[groupKey].tabaquismo++;
-                else if (r.keyCategory === 'alcoholismo') monthlyGroups[groupKey].alcoholismo++;
-                else if (r.keyCategory === 'adicciones') monthlyGroups[groupKey].adicciones++;
-            });
+    } catch (error) {
+        console.error('Error al renderizar la tabla de resumen mensual:', error);
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-message" style="color: red;">Error al conectar con el servidor.</td></tr>`;
+    }
+}
 
-            // Ordenar las claves de forma descendente (mes más reciente primero)
-            const sortedKeys = Object.keys(monthlyGroups).sort((a, b) => b.localeCompare(a));
 
-            tbody.innerHTML = sortedKeys.map(key => {
-                const group = monthlyGroups[key];
-                const totalMonth = group.tabaquismo + group.alcoholismo + group.adicciones;
-                return `
-                    <tr>
-                        <td style="font-weight: 600; color: var(--text-main);"><i class="fa-regular fa-calendar"></i> ${group.label}</td>
-                        <td style="font-weight: 700; color: var(--accent-tabaco);">${group.tabaquismo}</td>
-                        <td style="font-weight: 700; color: var(--accent-alcohol);">${group.alcoholismo}</td>
-                        <td style="font-weight: 700; color: var(--accent-adicciones);">${group.adicciones}</td>
-                        <td class="total-cell" style="text-align: center; font-size:1.1rem;">${totalMonth}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
+
+
+
+
+
+
+
+
+
 
 
 
