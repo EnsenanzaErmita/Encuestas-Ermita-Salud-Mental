@@ -1662,12 +1662,10 @@ async function renderResponsesTable() {
         const response = await fetch('https://encuestas-ermita-salud-mental.onrender.com/api/surveys');
         if (!response.ok) throw new Error('Error en la respuesta del servidor.');
 
-        const rawData = await response.json();
-        
-        // CORRECCIÓN: Si mysql2 manda un arreglo anidado, extraemos las filas puras de forma segura
-        const responses = Array.isArray(rawData[0]) ? rawData[0] : rawData;
+        const responses = await response.json();
 
-        if (!responses || responses.length === 0) {
+        // Validación de seguridad elemental: que sea un arreglo válido con información
+        if (!responses || !Array.isArray(responses) || responses.length === 0) {
             tbody.innerHTML = `<tr><td colspan="4" class="empty-message">No se han completado encuestas todavía.</td></tr>`;
             return;
         }
@@ -1704,12 +1702,10 @@ async function renderMonthlySummaryTable() {
         const response = await fetch('https://encuestas-ermita-salud-mental.onrender.com/api/surveys');
         if (!response.ok) throw new Error('Error en la respuesta mensual.');
 
-        const rawData = await response.json();
-        
-        // CORRECCIÓN: Extraemos filas puras protegiendo contra arreglos dobles
-        const responses = Array.isArray(rawData[0]) ? rawData[0] : rawData;
+        const responses = await response.json();
 
-        if (!responses || responses.length === 0) {
+        // Validación de seguridad elemental: que sea un arreglo válido con información
+        if (!responses || !Array.isArray(responses) || responses.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" class="empty-message">No existen registros mensuales analizados.</td></tr>`;
             return;
         }
@@ -1718,7 +1714,6 @@ async function renderMonthlySummaryTable() {
         const monthlyGroups = {};
 
         responses.forEach(r => {
-            // CORRECCIÓN: Si el registro no tiene fecha, le asignamos la fecha actual para evitar que la app se caiga
             const rDate = r.timestamp ? new Date(r.timestamp) : new Date();
             const year = rDate.getFullYear();
             const monthIdx = rDate.getMonth();
