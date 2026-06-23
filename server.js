@@ -1,6 +1,3 @@
-// Cambios 1
-// Cambios 2
-// Cambios 4
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
@@ -51,59 +48,45 @@ function handleDisconnect() {
 // Inicializamos la conexión automática
 handleDisconnect();
 
+
+
+
+
+
+
 // =========================================================================
 // 3. RUTAS DE LA API
 // =========================================================================
 
-
-
-
-
-// NUEVA RUTA: Validar acceso de Administrador o Empleado Autorizado (RFC)
+// CORREGIDO: Se cambia la tabla "encuestas" por tu tabla real "survey_responses"
 app.post('/api/validar-acceso', (req, res) => {
     const { clave } = req.body;
-    const ADMIN_PASSWORD = "ViperMístico"; // Asegúrate de mantener tu contraseña real
 
-    if (!clave) {
-        return res.status(400).json({ autorizado: false, mensaje: 'La clave es requerida.' });
-    }
-
-    // 1. Validar primero contra la contraseña del Administrador
-    if (clave === ADMIN_PASSWORD) {
-        return res.status(200).json({ autorizado: true });
-    }
-
-    // 2. Limpiar rigurosamente el texto que ingresó el usuario
-    const rfcUsuario = clave.toUpperCase().trim();
-
-    // 3. Consulta exacta sin duplicados ni errores de sintaxis
-    const sql = 'SELECT rfc FROM employees WHERE UPPER(rfc) = ? LIMIT 1';
-    
-    db.query(sql, [rfcUsuario], (err, results) => {
+    // 1. Validar la clave del administrador o RFC
+    const queryValidar = 'SELECT * FROM usuarios WHERE rfc = ? OR clave_admin = ?';
+    db.query(queryValidar, [clave, clave], (err, usuario) => {
         if (err) {
-            console.error('Error al validar acceso en MySQL:', err);
-            return res.status(500).json({ autorizado: false, mensaje: 'Error interno en el servidor.' });
+            console.error('Error al validar acceso:', err);
+            return res.status(500).json({ error: 'Error interno del servidor' });
         }
+        if (usuario.length === 0) return res.status(401).json({ mensaje: 'No autorizado' });
 
-        // Verificamos si la consulta devolvió al menos un registro válido
-        if (results && results.length > 0) {
-            return res.status(200).json({ autorizado: true });
-        } else {
-            return res.status(401).json({ autorizado: false, mensaje: 'Acceso denegado.' });
-        }
+        // 2. CORRECCIÓN CRÍTICA: Cambiado a survey_responses y añadido ORDER BY para ver lo más reciente
+        const queryEncuestas = 'SELECT timestamp, diagnostic, keyCategory, assistant FROM survey_responses ORDER BY timestamp DESC';
+        db.query(queryEncuestas, (errDb, rows) => {
+            if (errDb) {
+                console.error('Error al consultar survey_responses:', errDb);
+                return res.status(500).json({ error: 'Error al consultar MySQL' });
+            }
+
+            // Enviamos estatus 200 y el arreglo completo de encuestas
+            return res.status(200).json({
+                success: true,
+                surveys: rows // Estos datos alimentarán directamente a tu tabla en el frontend
+            });
+        });
     });
 });
-
-
-
-
-
-
-
-
-
-
-
 
 // RUTA API: Obtener la lista de todos los empleados
 app.get('/api/doctors', (req, res) => {
@@ -180,9 +163,6 @@ app.post('/api/goals', (req, res) => {
     });
 });
 
-
-
-
 // RUTA API: Guardar una nueva respuesta de encuesta con diagnóstico y asistente
 app.post('/api/surveys', (req, res) => {
     const { keyCategory, diagnostic, assistant } = req.body;
@@ -201,11 +181,6 @@ app.post('/api/surveys', (req, res) => {
     });
 });
 
-
-
-
-
-
 // RUTA API GENERAL: Obtener todas las encuestas registradas para la tabla de administración
 app.get('/api/surveys', (req, res) => {
     const sql = 'SELECT keyCategory, diagnostic, assistant, timestamp FROM survey_responses ORDER BY timestamp DESC';
@@ -215,24 +190,10 @@ app.get('/api/surveys', (req, res) => {
             console.error('Error al consultar encuestas en MySQL:', err);
             return res.status(500).json([]);
         }
-
-        // CORRECCIÓN DEFINITIVA: mysql2 devuelve un arreglo de arreglos. 
-        // Las filas de la base de datos están siempre en la primera posición.
         const filasReales = (results && Array.isArray(results)) ? results : [];
-
-        // Enviamos al frontend únicamente los registros limpios de la tabla
         res.status(200).json(filasReales);
     });
 });
-
-
-
-
-
-
-
-
-
 
 // RUTA API: Obtener estadísticas y contadores unificados
 app.get('/api/stats', (req, res) => {
@@ -270,6 +231,15 @@ app.get('/api/stats', (req, res) => {
         res.status(200).json(stats);
     });
 });
+
+
+
+
+
+
+
+
+
 
 // =========================================================================
 // 4. RUTA PARA SERVIR EL HTML (Abajo de la API)
