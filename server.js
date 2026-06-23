@@ -200,17 +200,25 @@ app.post('/api/surveys', (req, res) => {
 
 
 
-// NUEVA RUTA API: Obtener todas las encuestas registradas para la tabla de administración
+
+
+
+// RUTA API GENERAL: Obtener todas las encuestas registradas para la tabla de administración
 app.get('/api/surveys', (req, res) => {
-    // Consultamos las encuestas ordenadas desde la más reciente a la más antigua
     const sql = 'SELECT keyCategory, diagnostic, assistant, timestamp FROM survey_responses ORDER BY timestamp DESC';
     
     db.query(sql, (err, results) => {
         if (err) {
             console.error('Error al consultar encuestas en MySQL:', err);
-            return res.status(500).json({ message: 'Error interno al obtener los datos.' });
+            return res.status(500).json([]);
         }
-        res.status(200).json(results);
+
+        // CORRECCIÓN DEFINITIVA: mysql2 devuelve un arreglo de arreglos. 
+        // Las filas de la base de datos están siempre en la primera posición.
+        const filasReales = (results && Array.isArray(results)) ? results : [];
+
+        // Enviamos al frontend únicamente los registros limpios de la tabla
+        res.status(200).json(filasReales);
     });
 });
 
