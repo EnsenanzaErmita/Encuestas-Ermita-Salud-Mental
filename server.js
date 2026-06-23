@@ -180,6 +180,9 @@ app.post('/api/goals', (req, res) => {
     });
 });
 
+
+
+
 // RUTA API: Guardar una nueva respuesta de encuesta con diagnóstico y asistente
 app.post('/api/surveys', (req, res) => {
     const { keyCategory, diagnostic, assistant } = req.body;
