@@ -1172,21 +1172,24 @@ async function accessResponses() {
     if (pass === null) return; 
 
     try {
-        // Detecta automáticamente si estás en localhost o en producción (Render/Clever)
-        const host = window.location.origin;
+        // Opción recomendada: usa la misma raíz del navegador de forma automática
+        const urlEndpoint = `${window.location.origin}/api/auth-responses`;
 
-        const response = await fetch(`${host}/api/auth-responses`, {
+        const response = await fetch(urlEndpoint, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
             body: JSON.stringify({ pass: pass })
         });
 
-        const data = await response.json();
+        // Aquí es donde fallaba porque el servidor enviaba un HTML en vez de JSON
+        const data = await response.json(); 
 
         if (response.ok && data.authorized) {
             hideAllSections();
             
-            // Pasamos el arreglo de respuestas directas de la base de datos
             calculateResponsesSemaphore(data.responses); 
             renderResponsesTable(data.responses);
             renderMonthlySummaryTable(data.responses); 
@@ -1196,8 +1199,8 @@ async function accessResponses() {
             alert(data.message || "Acceso denegado. No es un Administrador o RFC Autorizado.");
         }
     } catch (error) {
-        console.error("Detalle del error de conexión:", error);
-        alert("Error de conexión con el servidor. Revisa la consola para más detalles.");
+        console.error("Error en la autenticación:", error);
+        alert("Hubo un error al validar tus datos. Revisa la consola.");
     }
 }
 
