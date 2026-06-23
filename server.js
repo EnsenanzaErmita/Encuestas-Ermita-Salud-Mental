@@ -58,20 +58,29 @@ handleDisconnect();
 // 3. RUTAS DE LA API
 // =========================================================================
 
-// CORREGIDO: Se cambia la tabla "encuestas" por tu tabla real "survey_responses"
+
+
+
+// CORREGIDO: Ahora busca el RFC directamente en la tabla real 'employees'
 app.post('/api/validar-acceso', (req, res) => {
     const { clave } = req.body;
 
-    // 1. Validar la clave del administrador o RFC
-    const queryValidar = 'SELECT * FROM usuarios WHERE rfc = ? OR clave_admin = ?';
+    // 1. Validamos el RFC contra la tabla 'employees' o si es la clave maestra de Admin
+    // NOTA: Si usas una clave de Admin general, puedes dejarla fija (ej. 'ADMIN123')
+    const queryValidar = "SELECT * FROM employees WHERE rfc = ? OR ? = 'ADMIN123'";
+    
     db.query(queryValidar, [clave, clave], (err, usuario) => {
         if (err) {
-            console.error('Error al validar acceso:', err);
+            console.error('Error al validar acceso en employees:', err);
             return res.status(500).json({ error: 'Error interno del servidor' });
         }
-        if (usuario.length === 0) return res.status(401).json({ mensaje: 'No autorizado' });
+        
+        // Si no se encontró el RFC en la tabla employees
+        if (usuario.length === 0) {
+            return res.status(401).json({ mensaje: 'No autorizado. RFC no registrado.' });
+        }
 
-        // 2. CORRECCIÓN CRÍTICA: Cambiado a survey_responses y añadido ORDER BY para ver lo más reciente
+        // 2. Si el RFC existe, traemos las encuestas de la tabla 'survey_responses'
         const queryEncuestas = 'SELECT timestamp, diagnostic, keyCategory, assistant FROM survey_responses ORDER BY timestamp DESC';
         db.query(queryEncuestas, (errDb, rows) => {
             if (errDb) {
@@ -79,14 +88,19 @@ app.post('/api/validar-acceso', (req, res) => {
                 return res.status(500).json({ error: 'Error al consultar MySQL' });
             }
 
-            // Enviamos estatus 200 y el arreglo completo de encuestas
+            // Enviamos estatus 200 y el paquete con todas las encuestas registradas
             return res.status(200).json({
                 success: true,
-                surveys: rows // Estos datos alimentarán directamente a tu tabla en el frontend
+                surveys: rows // Estos datos alimentarán tus tablas en el frontend
             });
         });
     });
 });
+
+
+
+
+
 
 // RUTA API: Obtener la lista de todos los empleados
 app.get('/api/doctors', (req, res) => {
