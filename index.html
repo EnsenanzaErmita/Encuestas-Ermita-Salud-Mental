@@ -793,6 +793,8 @@ table td:last-child {
 	    </div>
 
 
+
+
         <div class="dynamic-section" id="responses-window">
             <div class="section-header">
                 <h2><i class="fa-solid fa-chart-pie" style="color: var(--accent-adicciones)"></i> Historial de Encuestas</h2>
@@ -841,6 +843,13 @@ table td:last-child {
                 </table>
             </div>
         </div>
+
+
+
+
+
+
+
 
     </div> <footer>
         <div class="footer-content">
@@ -1073,53 +1082,77 @@ async function saveMonthlyGoal(e) {
             }
         }
 
-        // Calcula y dibuja la semaforización en la sección respuestas
-        function calculateResponsesSemaphore() {
-            const responses = JSON.parse(localStorage.getItem('surveyResponses')) || [];
-            const savedGoal = localStorage.getItem('surveyMonthlyGoal');
-            
-            const currentDate = new Date();
-            const currentMonth = currentDate.getMonth(); 
-            const currentYear = currentDate.getFullYear();
 
-            const totalMonthSurveys = responses.filter(r => {
-                const rDate = new Date(r.timestamp);
-                return rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear;
-            }).length;
 
-            const badge = document.getElementById('semaphore-icon-badge');
-            const title = document.getElementById('semaphore-title-text');
-            const phrase = document.getElementById('semaphore-phrase-text');
 
-            badge.className = "semaphore-badge";
 
-            if (!savedGoal) {
-                badge.innerHTML = `<i class="fa-solid fa-chart-simple"></i>`;
-                badge.classList.add('amarillo');
-                title.innerText = `Contador de este Mes: ${totalMonthSurveys} encuestas`;
-                phrase.innerText = "No se ha definido una meta mensual en el panel de administrador.";
-                return;
-            }
 
-            const goalNumber = parseInt(savedGoal);
-            const compliancePercentage = (totalMonthSurveys / goalNumber) * 100;
 
-            title.innerText = `Progreso Mensual: ${totalMonthSurveys} de ${goalNumber} encuestas (${compliancePercentage.toFixed(1)}%)`;
 
-            if (compliancePercentage < 50) {
-                badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i>`;
-                badge.classList.add('rojo');
-                phrase.innerText = "¡Vamos arrancando! Cada encuesta cuenta para alcanzar nuestra meta mensual. ¡Sí se puede!";
-            } else if (compliancePercentage >= 50 && compliancePercentage < 90) {
-                badge.innerHTML = `<i class="fa-solid fa-bolt"></i>`;
-                badge.classList.add('amarillo');
-                phrase.innerText = "¡Buen progreso! Estamos a más de la mitad del camino. Mantengamos el ritmo.";
-            } else {
-                badge.innerHTML = `<i class="fa-solid fa-star"></i>`;
-                badge.classList.add('verde');
-                phrase.innerText = "¡Excelente trabajo! Meta casi completada o superada. Gracias por tu enorme compromiso.";
-            }
-        }
+
+
+// Calcula y dibuja la semaforización en la sección respuestas usando datos reales del servidor
+function calculateResponsesSemaphore(responsesFromServer) {
+    // CORREGIDO: Usamos los datos reales del servidor; si no hay, dejamos un arreglo vacío
+    const responses = responsesFromServer || [];
+    const savedGoal = localStorage.getItem('surveyMonthlyGoal');
+    
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth(); 
+    const currentYear = currentDate.getFullYear();
+
+    const totalMonthSurveys = responses.filter(r => {
+        const rDate = new Date(r.timestamp);
+        return rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear;
+    }).length;
+
+    const badge = document.getElementById('semaphore-icon-badge');
+    const title = document.getElementById('semaphore-title-text');
+    const phrase = document.getElementById('semaphore-phrase-text');
+
+    if (!badge || !title || !phrase) return; // Validación de seguridad por si los elementos no existen en el HTML
+
+    badge.className = "semaphore-badge";
+
+    if (!savedGoal) {
+        badge.innerHTML = `<i class="fa-solid fa-chart-simple"></i>`;
+        badge.classList.add('amarillo');
+        title.innerText = `Contador de este Mes: ${totalMonthSurveys} encuestas`;
+        phrase.innerText = "No se ha definido una meta mensual en el panel de administrador.";
+        return;
+    }
+
+    const goalNumber = parseInt(savedGoal);
+    const compliancePercentage = goalNumber > 0 ? (totalMonthSurveys / goalNumber) * 100 : 0;
+
+    title.innerText = `Progreso Mensual: ${totalMonthSurveys} de ${goalNumber} encuestas (${compliancePercentage.toFixed(1)}%)`;
+
+    if (compliancePercentage < 50) {
+        badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i>`;
+        badge.classList.add('rojo');
+        phrase.innerText = "¡Vamos arrancando! Cada encuesta cuenta para alcanzar nuestra meta mensual. ¡Sí se puede!";
+    } else if (compliancePercentage >= 50 && compliancePercentage < 90) {
+        badge.innerHTML = `<i class="fa-solid fa-bolt"></i>`;
+        badge.classList.add('amarillo');
+        phrase.innerText = "¡Buen progreso! Estamos a más de la mitad del camino. Mantengamos el ritmo.";
+    } else {
+        badge.innerHTML = `<i class="fa-solid fa-star"></i>`;
+        badge.classList.add('verde');
+        phrase.innerText = "¡Excelente trabajo! Meta casi completada o superada. Gracias por tu enorme compromiso.";
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
         function hideAllSections() {
             document.getElementById('menu-container').style.display = 'none';
@@ -1181,18 +1214,26 @@ async function accessResponses() {
         
         // Si el estatus es 200 (OK), el servidor validó el acceso
         if (response.ok) {
+            // 1. Limpiamos la pantalla apagando todas las ventanas previas
             hideAllSections();
-            calculateResponsesSemaphore(); 
             
-            // CORRECCIÓN AQUÍ: Agregamos 'await' para forzar al navegador a esperar los datos de MySQL
-            await renderResponsesTable();
+            // 2. CORREGIDO: Descargamos los datos y los guardamos en una variable
+            const datosEncuestas = await renderResponsesTable();
+            
+            // 3. Renderizamos el resumen mensual estadístico
             await renderMonthlySummaryTable(); 
             
-            // Ahora sí, mostramos la ventana y el encabezado con los datos completamente renderizados
+            // 4. CORREGIDO: Le pasamos los datos reales descargados al semáforo mensual
+            calculateResponsesSemaphore(datosEncuestas); 
+            
+            // 5. Encendemos el encabezado y la ventana del panel de control
             if (document.getElementById('main-header')) {
                 document.getElementById('main-header').style.display = 'block';
             }
-            document.getElementById('responses-window').style.display = 'block';
+            if (document.getElementById('responses-window')) {
+                document.getElementById('responses-window').style.display = 'block';
+            }
+            
         } else {
             alert("Acceso denegado. No es un Administrador o RFC Autorizado.");
         }
@@ -1659,12 +1700,13 @@ async function populateAssistantSelect() {
 
 
 
+
 // Define la URL real de tu backend aquí
 const API_URL = 'https://encuestas-ermita-salud-mental.onrender.com'; 
 
 async function renderResponsesTable() {
     const tbody = document.getElementById('responses-table-body');
-    if (!tbody) return;
+    if (!tbody) return []; // CORREGIDO: Retorna un arreglo vacío si no encuentra la tabla
     tbody.innerHTML = `<tr><td colspan="4" class="empty-message">Cargando respuestas desde el servidor...</td></tr>`;
 
     try {
@@ -1676,7 +1718,7 @@ async function renderResponsesTable() {
 
         if (!responses || !Array.isArray(responses) || responses.length === 0) {
             tbody.innerHTML = `<tr><td colspan="4" class="empty-message">No se han completado encuestas todavía.</td></tr>`;
-            return;
+            return []; // CORREGIDO: Retorna un arreglo vacío si el servidor no tiene datos
         }
 
         const htmlFilas = [];
@@ -1709,11 +1751,24 @@ async function renderResponsesTable() {
 
         tbody.innerHTML = htmlFilas.length > 0 ? htmlFilas.join('') : `<tr><td colspan="4" class="empty-message">No se pudieron renderizar las encuestas.</td></tr>`;
 
+        // ==========================================
+        // ¡NUEVO CAMBIO CRÍTICO!
+        // Retornamos los datos descargados para que el semáforo los use
+        // ==========================================
+        return responses; 
+
     } catch (error) {
         console.error('Error al renderizar la tabla de respuestas:', error);
         tbody.innerHTML = `<tr><td colspan="4" class="empty-message" style="color: red;">Error al cargar las respuestas. Mira la consola.</td></tr>`;
+        return []; // CORREGIDO: Retorna un arreglo vacío si la petición falla
     }
 }
+
+
+
+
+
+
 
 async function renderMonthlySummaryTable() {
     const tbody = document.getElementById('monthly-summary-table-body');
