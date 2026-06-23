@@ -1169,13 +1169,11 @@ async function saveMonthlyGoal(e) {
 
 async function accessResponses() {
     const pass = prompt("Ingrese su contraseña (RFC autorizado o clave de Administrador):");
-    if (pass === null) return; 
+    if (pass === null) return; // Si el usuario cancela, no hace nada
 
     try {
-        // Opción recomendada: usa la misma raíz del navegador de forma automática
-        const urlEndpoint = `${window.location.origin}/api/auth-responses`;
-
-        const response = await fetch(urlEndpoint, {
+        // Al usar '/api/...' de forma relativa, el navegador usa exactamente el mismo dominio que ya validaste
+        const response = await fetch('/api/auth-responses', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -1184,12 +1182,12 @@ async function accessResponses() {
             body: JSON.stringify({ pass: pass })
         });
 
-        // Aquí es donde fallaba porque el servidor enviaba un HTML en vez de JSON
-        const data = await response.json(); 
+        const data = await response.json();
 
         if (response.ok && data.authorized) {
             hideAllSections();
             
+            // Enviamos las respuestas obtenidas de Clever Cloud a tus funciones
             calculateResponsesSemaphore(data.responses); 
             renderResponsesTable(data.responses);
             renderMonthlySummaryTable(data.responses); 
@@ -1199,8 +1197,8 @@ async function accessResponses() {
             alert(data.message || "Acceso denegado. No es un Administrador o RFC Autorizado.");
         }
     } catch (error) {
-        console.error("Error en la autenticación:", error);
-        alert("Hubo un error al validar tus datos. Revisa la consola.");
+        console.error("Error detallado en la autenticación:", error);
+        alert("Hubo un error al procesar la solicitud. Revisa la consola.");
     }
 }
 
