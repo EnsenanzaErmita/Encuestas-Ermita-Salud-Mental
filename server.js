@@ -1,4 +1,5 @@
 // Cambios 1
+// Cambios 2
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
@@ -55,6 +56,7 @@ handleDisconnect();
 
 
 
+
 // NUEVA RUTA: Validar acceso de Administrador o Empleado Autorizado (RFC)
 app.post('/api/validar-acceso', (req, res) => {
     const { clave } = req.body;
@@ -69,27 +71,35 @@ app.post('/api/validar-acceso', (req, res) => {
         return res.status(200).json({ autorizado: true });
     }
 
-    // 2. Si no es admin, limpiar el texto entrante
-    const rfcLimpio = clave.toUpperCase().trim();
+    // 2. Limpiar el RFC ingresado por el usuario
+    const rfcUsuario = clave.toUpperCase().trim();
 
-    // CORRECCIÓN: Usamos TRIM() tanto en la columna de la BD como en el valor enviado
-    // Esto remueve cualquier espacio invisible que Clever Cloud o MySQL hayan autocompletado
-    const sql = 'SELECT * FROM employees WHERE TRIM(UPPER(rfc)) = ? LIMIT 1';
+    // 3. Buscar el RFC en la tabla employees
+    const sql = 'SELECT rfc FROM employees WHERE UPPER(rfc) = ? LIMIT 1';
     
-    db.query(sql, [rfcLimpio], (err, results) => {
+    db.query(sql, [rfcUsuario], (err, results) => {
         if (err) {
             console.error('Error al validar acceso en MySQL:', err);
             return res.status(500).json({ autorizado: false, mensaje: 'Error interno en el servidor.' });
         }
 
-        // Validación segura de filas obtenidas
-        if (results && results.length > 0) {
+        // Convertimos el resultado a texto para inspeccionarlo sin importar cómo lo devuelva mysql2
+        const coincidenciaTexto = JSON.stringify(results);
+
+        // Si el texto de la respuesta contiene el RFC que buscamos, el acceso es correcto
+        if (coincidenciaTexto.includes(rfcUsuario)) {
             return res.status(200).json({ autorizado: true });
         } else {
             return res.status(401).json({ autorizado: false, mensaje: 'Acceso denegado.' });
         }
     });
 });
+
+
+
+
+
+
 
 
 
