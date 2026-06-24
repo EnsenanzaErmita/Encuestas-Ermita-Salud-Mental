@@ -631,7 +631,7 @@ table td:last-child {
 
     <!-- Cambia este número manualmente cada vez que vayas a actualizar Git -->
     <div style="font-size: 0.9em; color: #ff9800; font-weight: bold; margin-top: 5px;">
-        v3.0.0
+        v4.0.0
     </div>
         </header>
 
@@ -1159,35 +1159,34 @@ async function saveMonthlyGoal(e) {
 function accessResponses() {
     const pass = prompt("Ingrese la contraseña de Administrador:");
     if (pass === ADMIN_PASSWORD) {
-        // 1. Apagamos todas las pantallas activas igual que en Administrador
+        // 1. Apagamos todas las secciones usando la función nativa del sistema
         hideAllSections();
         
-        // 2. Buscamos tu contenedor de respuestas
-        const responsesWindow = document.getElementById('responses-window');
+        // 2. TRUCO DEFINITIVO: Usamos el contenedor de Admin (que ya sabemos que SÍ SE MUESTRA)
+        const adminWindow = document.getElementById('admin-window');
         
-        if (responsesWindow) {
-            // 3. Inyectamos la frase fija de forma limpia
-            responsesWindow.innerHTML = `
+        if (adminWindow) {
+            // 3. Reemplazamos temporalmente su contenido con tu frase fija
+            adminWindow.innerHTML = `
                 <div class="section-header">
                     <h2><i class="fa-solid fa-database"></i> Panel de Administración</h2>
-                    <button class="btn-back" onclick="goHome()"><i class="fa-solid fa-xmark"></i> Volver</button>
+                    <button class="btn-back" onclick="location.reload()"><i class="fa-solid fa-xmark"></i> Volver</button>
                 </div>
-                <div style="text-align: center; padding: 40px; margin-top: 20px; background: rgba(168, 85, 247, 0.1); border: 2px dashed var(--accent-adicciones, #a855f7); border-radius: 8px;">
-                    <h1 style="color: #4caf50; font-size: 2rem; margin: 0;">¡Por fin veo la información!</h1>
+                <div style="text-align: center; padding: 40px; margin-top: 20px; background: rgba(168, 85, 247, 0.1); border: 2px dashed #a855f7; border-radius: 8px;">
+                    <h1 style="color: #4caf50; font-size: 2rem; margin: 0; font-family: sans-serif;">¡Por fin veo la información!</h1>
                 </div>
             `;
             
-            // 4. Lo mostramos usando exactamente el mismo método que le funciona a admin-window
-            responsesWindow.style.display = 'block';
+            // 4. Encendemos el panel que sabemos que el CSS sí respeta
+            adminWindow.style.display = 'block';
         } else {
-            alert("Error: El contenedor 'responses-window' no existe en el HTML.");
+            alert("Error: No se encontró el contenedor de administración.");
         }
 
     } else if (pass !== null) {
         alert("Contraseña Incorrecta.");
     }
 }
-
 
 
 
