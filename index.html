@@ -1821,9 +1821,13 @@ function renderMonthlySummaryTable(responses) {
 
 
 
+
 function renderStaffCounters(responses) {
     const contenedor = document.getElementById('contenedor-tarjetas-encuestadores');
-    if (!contenedor) return;
+    if (!contenedor) {
+        console.error("Error: No se encontró el contenedor '#contenedor-tarjetas-encuestadores'");
+        return;
+    }
 
     if (!responses || !Array.isArray(responses) || responses.length === 0) {
         contenedor.innerHTML = `<p style="color: #94a3b8; text-align: center; padding: 20px;">No hay encuestas registradas para contabilizar.</p>`;
@@ -1835,16 +1839,13 @@ function renderStaffCounters(responses) {
 
     responses.forEach(r => {
         if (!r) return;
-        // Tomamos el nombre del asistente (si viene vacío usamos 'No especificado')
         const nombreAsistente = r.assistant ? r.assistant.trim() : 'Personal No Especificado';
         const categoria = r.keyCategory ? r.keyCategory.toLowerCase().trim() : '';
 
-        // Si es la primera vez que vemos a esta persona, le creamos sus contadores en 0
         if (!conteoPersonal[nombreAsistente]) {
             conteoPersonal[nombreAsistente] = { tabaquismo: 0, alcoholismo: 0, adicciones: 0, total: 0 };
         }
 
-        // Sumamos al contador correspondiente
         if (categoria === 'tabaquismo') conteoPersonal[nombreAsistente].tabaquismo++;
         else if (categoria === 'alcoholismo') conteoPersonal[nombreAsistente].alcoholismo++;
         else if (categoria === 'adicciones') conteoPersonal[nombreAsistente].adicciones++;
@@ -1852,35 +1853,36 @@ function renderStaffCounters(responses) {
         conteoPersonal[nombreAsistente].total++;
     });
 
-    // 2. Construimos el HTML dinámico con el mismo estilo de rejilla (Grid) que propusiste
+    // 2. Construimos el HTML dinámico de las tarjetas
     let htmlFinal = '';
 
     Object.keys(conteoPersonal).forEach(nombre => {
         const datos = conteoPersonal[nombre];
         htmlFinal += `
-            <div style="background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
-                <h4 style="margin-top: 0; margin-bottom: 15px; color: #f8fafc; font-size: 1.1rem; border-left: 4px solid var(--accent-info, #38bdf8); padding-left: 10px;">
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 10px;">
+                <h4 style="margin-top: 0; margin-bottom: 15px; color: #f8fafc; font-size: 1.1rem; border-left: 4px solid #38bdf8; padding-left: 10px; text-transform: uppercase;">
                     ${nombre} <span style="font-size: 0.9rem; color: #94a3b8; font-weight: normal;">(Total: ${datos.total})</span>
                 </h4>
                 
-                <div class="counter-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center;">
-                    <div class="counter-item" style="background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 10px;">
-                        <span class="counter-number count-tabaco" style="display: block; font-size: 1.5rem; font-weight: bold; color: var(--accent-tabaco, #ef4444);">${datos.tabaquismo}</span>
-                        <span class="counter-label" style="font-size: 0.85rem; color: #94a3b8;">Tabaquismo</span>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center;">
+                    <div style="background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 10px;">
+                        <span style="display: block; font-size: 1.5rem; font-weight: bold; color: #ef4444;">${datos.tabaquismo}</span>
+                        <span style="font-size: 0.85rem; color: #94a3b8;">Tabaquismo</span>
                     </div>
-                    <div class="counter-item" style="background: rgba(245, 158, 11, 0.1); padding: 10px; border-radius: 10px;">
-                        <span class="counter-number count-alcohol" style="display: block; font-size: 1.5rem; font-weight: bold; color: var(--accent-alcohol, #f59e0b);">${datos.alcoholismo}</span>
-                        <span class="counter-label" style="font-size: 0.85rem; color: #94a3b8;">Alcoholismo</span>
+                    <div style="background: rgba(245, 158, 11, 0.1); padding: 10px; border-radius: 10px;">
+                        <span style="display: block; font-size: 1.5rem; font-weight: bold; color: #f59e0b;">${datos.alcoholismo}</span>
+                        <span style="font-size: 0.85rem; color: #94a3b8;">Alcoholismo</span>
                     </div>
-                    <div class="counter-item" style="background: rgba(168, 85, 247, 0.1); padding: 10px; border-radius: 10px;">
-                        <span class="counter-number count-adicciones" style="display: block; font-size: 1.5rem; font-weight: bold; color: var(--accent-adicciones, #a855f7);">${datos.adicciones}</span>
-                        <span class="counter-label" style="font-size: 0.85rem; color: #94a3b8;">Adicciones</span>
+                    <div style="background: rgba(168, 85, 247, 0.1); padding: 10px; border-radius: 10px;">
+                        <span style="display: block; font-size: 1.5rem; font-weight: bold; color: #a855f7;">${datos.adicciones}</span>
+                        <span style="font-size: 0.85rem; color: #94a3b8;">Adicciones</span>
                     </div>
                 </div>
             </div>
         `;
     });
 
+    // CORREGIDO: Asignación limpia al contenedor HTML sin variables fantasma
     contenedor.innerHTML = htmlFinal;
 }
 
