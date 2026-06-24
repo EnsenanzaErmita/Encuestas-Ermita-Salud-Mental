@@ -1,3 +1,4 @@
+    // mODIF1
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1708,45 +1709,50 @@ function renderResponsesTable() {
 
 
 
-// 1. Validar contraseña contra Admin o RFCs de la tabla employees en MySQL
+
+
+
+// =========================================================================
+// 1. FUNCIÓN DE ACCESO (Asegúrate de que reemplace por completo la anterior)
+// =========================================================================
 async function accessResponses() {
     const pass = prompt("Ingrese su contraseña (RFC autorizado o clave de Administrador):");
-    if (pass === null) return;
+    if (pass === null) return; 
 
-    // Validación directa si es el Administrador principal
-    if (pass === ADMIN_PASSWORD) {
+    const contraseñaLimpia = pass.trim();
+
+    if (contraseñaLimpia === ADMIN_PASSWORD) {
         cargarYRenderizarBloquesEmpleados();
         return;
     }
 
     try {
-        // Consultamos la tabla employees en tiempo real mediante tu API existente
         const response = await fetch(`${BASE_URL}/api/doctors`);
-        if (!response.ok) throw new Error('Error al validar con el servidor.');
+        if (!response.ok) throw new Error('Error al conectar con el servidor.');
         
         const employees = await response.json();
-        // Comparamos si el texto introducido coincide con algún RFC registrado
-        const isAuthorized = employees.some(emp => emp.rfc.toUpperCase() === pass.toUpperCase());
+        
+        const isAuthorized = employees.some(emp => {
+            if (emp && emp.rfc) {
+                return emp.rfc.trim().toUpperCase() === contraseñaLimpia.toUpperCase();
+            }
+            return false;
+        });
 
         if (isAuthorized) {
             cargarYRenderizarBloquesEmpleados();
         } else {
-            alert("Acceso denegado. No es un Administrador o RFC Autorizado.");
+            alert(`Acceso denegado.\n\nEl texto "${contraseñaLimpia}" no coincide con la clave de Admin ni con ningún RFC registrado en la tabla "employees".`);
         }
     } catch (error) {
-        console.error('Error en autenticación:', error);
-        alert('Error de conexión con la base de datos.');
+        console.error('Error crítico en el proceso de autenticación:', error);
+        alert('Error de comunicación con la base de datos en la nube.');
     }
 }
 
-
-
-
-
-
-
-
-// FUNCIÓN EN MODO PRUEBA ESTÁTICA PARA DESCARTAR ERRORES VISUALES
+// =========================================================================
+// 2. FUNCIÓN DE PRUEBA ESTÁTICA (Ponla justo debajo de accessResponses)
+// =========================================================================
 function cargarYRenderizarBloquesEmpleados() {
     hideAllSections();
     
@@ -1756,7 +1762,7 @@ function cargarYRenderizarBloquesEmpleados() {
         return;
     }
     
-    // Forzamos la inyección de un bloque idéntico al menú principal con datos de prueba
+    // Forzamos la inyección del bloque de prueba
     container.innerHTML = `
         <div class="community-counter-box" style="background: rgba(255, 255, 255, 0.04); text-align: left; padding: 25px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;">
