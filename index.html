@@ -631,7 +631,7 @@ table td:last-child {
 
     <!-- Cambia este número manualmente cada vez que vayas a actualizar Git -->
     <div style="font-size: 0.9em; color: #ff9800; font-weight: bold; margin-top: 5px;">
-        v12.0.0
+        v13.0.0
     </div>
         </header>
 
@@ -1241,23 +1241,38 @@ function cargarPanelRespuestas() {
                 bloqueClonado.style.borderLeft = '5px solid var(--accent-admin, #a855f7)';
                 bloqueClonado.style.padding = '20px';
                 bloqueClonado.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                bloqueClonado.style.marginBottom = '20px';
                 
+                // Extraemos el primer nombre de la cadena para que la tarjeta no quede saturada de texto
+                const primerNombre = item.assistant ? item.assistant.trim().split(' ')[0] : 'Empleado';
+
                 bloqueClonado.innerHTML = `
                     <h3 style="margin-top:0; color: var(--accent-admin); font-size: 1.3rem; text-transform: uppercase;">
                         <i class="fa-solid fa-user-doctor"></i> Personal: ${item.assistant}
                     </h3>
                     <div class="counter-grid" style="margin-top: 15px;">
+                        <!-- 1. Contenedor Tabaquismo -->
                         <div class="counter-item">
                             <span class="counter-number count-tabaco" style="font-size: 2rem;">${item.tabaco || 0}</span>
                             <span class="counter-label">Tabaquismo</span>
                         </div>
+                        
+                        <!-- 2. Contenedor Alcoholismo -->
                         <div class="counter-item">
                             <span class="counter-number count-alcohol" style="font-size: 2rem;">${item.alcohol || 0}</span>
                             <span class="counter-label">Alcoholismo</span>
                         </div>
+                        
+                        <!-- 3. Contenedor Adicciones -->
                         <div class="counter-item">
                             <span class="counter-number count-adicciones" style="font-size: 2rem;">${item.adicciones || 0}</span>
                             <span class="counter-label">Adicciones</span>
+                        </div>
+
+                        <!-- 4. NUEVO CONTENEDOR VISUAL: TOTAL GENERAL DEL EMPLEADO -->
+                        <div class="counter-item" style="background: rgba(168, 85, 247, 0.15); border: 1px dashed var(--accent-admin, #a855f7); border-radius: 8px;">
+                            <span class="counter-number" style="font-size: 2rem; color: #ffca28; font-weight: bold;">${item.total || 0}</span>
+                            <span class="counter-label" style="color: #ffca28; font-weight: bold;">Total ${primerNombre}</span>
                         </div>
                     </div>
                     <div style="margin-top: 15px; font-size: 0.9rem; text-align: right; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
@@ -1274,7 +1289,6 @@ function cargarPanelRespuestas() {
             }
         });
 }
-
 
 
 
