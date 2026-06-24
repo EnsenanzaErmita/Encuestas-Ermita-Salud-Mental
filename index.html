@@ -1,4 +1,3 @@
-    // mODIF1
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -37,18 +36,25 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        body {
-            background: var(--bg-gradient);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            overflow-x: hidden;
-            padding: 0 20px 140px 20px; /* Espacio inferior para evitar solapamiento con el footer */
-            position: relative;
-        }
+
+
+
+body {
+    background: var(--bg-gradient);
+    color: var(--text-main);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    overflow-x: hidden;
+    padding: 0 20px 40px 20px; /* Reducido para evitar empujones */
+    position: relative;
+}
+
+
+
+
 
         /* Barra de Navegación Superior */
         .navbar {
@@ -376,20 +382,26 @@
             font-style: italic;
         }
 
-        /* Secciones Dinámicas Ocultas (Tests, Admin, Respuestas) */
-        .dynamic-section {
-            display: none;
-            width: 100%;
-            background: rgba(30, 41, 59, 0.7);
-            border: 1px solid var(--card-border);
-            border-radius: 24px;
-            padding: 40px;
-            backdrop-filter: blur(20px);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            animation: scaleUp 0.4s ease-out;
-            margin-top: 10px;
-            flex-grow: 1;
-        }
+
+
+
+/* 2. REEMPLAZA LAS SECCIONES DINÁMICAS PARA FORZAR SU VISIBILIDAD Y ALTURA */
+.dynamic-section {
+    display: none;
+    width: 100%;
+    max-width: 1200px; /* Asegura que se alinee perfectamente con tu diseño */
+    background: rgba(30, 41, 59, 0.9); /* Un poco más sólido para que no transparente el fondo */
+    border: 1px solid var(--card-border);
+    border-radius: 24px;
+    padding: 40px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: scaleUp 0.4s ease-out;
+    margin-top: 20px;
+    margin-bottom: 60px; /* Margen inferior para que nunca lo toque el footer */
+    min-height: 350px; /* FUERZA un alto mínimo para que no se colapse a 0 píxeles */
+}
+
 
         .section-header {
             display: flex;
@@ -531,21 +543,28 @@
 
         .empty-message { text-align: center; color: var(--text-muted); padding: 30px; font-style: italic; }
 
-        /* PIE DE PÁGINA GLOBAL */
-        footer {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: rgba(15, 23, 42, 0.9);
-            border-top: 1px solid var(--card-border);
-            backdrop-filter: blur(15px);
-            padding: 22px 0;
-            text-align: center;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            line-height: 1.6;
-        }
+
+
+
+
+/* 3. REEMPLAZA EL PIE DE PÁGINA PARA QUE NO TAPE NADA (DE ABSOLUTE A FIXED O RELATIVE) */
+footer {
+    position: relative; /* Cambiado de absolute a relative para que se quede abajo del contenido y no encima */
+    margin-top: auto; /* Empuja el footer al fondo de la pantalla de forma natural */
+    width: 100%;
+    background: rgba(15, 23, 42, 0.95);
+    border-top: 1px solid var(--card-border);
+    backdrop-filter: blur(15px);
+    padding: 22px 0;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    z-index: 10; /* Control de capas */
+}
+
+
+
 
         footer .footer-content {
             max-width: 1200px;
