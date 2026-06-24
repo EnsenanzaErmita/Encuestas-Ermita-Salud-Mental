@@ -793,37 +793,54 @@ table td:last-child {
 	    </div>
 
 
+        <div class="dynamic-section" id="responses-window">
+            <div class="section-header">
+                <h2><i class="fa-solid fa-chart-pie" style="color: var(--accent-adicciones)"></i> Historial de Encuestas</h2>
+                <button class="btn-back" onclick="goHome()"><i class="fa-solid fa-xmark"></i> Volver</button>
+            </div>
+            
+            <div class="semaphore-panel" id="responses-semaphore-box">
+                <div class="semaphore-badge" id="semaphore-icon-badge"><i class="fa-solid fa-chart-simple"></i></div>
+                <div class="semaphore-info">
+                    <h4 id="semaphore-title-text">Contador Total del Mes: 0 encuestas</h4>
+                    <p id="semaphore-phrase-text">Iniciando el periodo de recolección de datos.</p>
+                </div>
+            </div>
 
+            <h3 style="margin-top: 15px; margin-bottom: 10px;"><i class="fa-solid fa-calendar-days" style="color: var(--accent-month)"></i> Historial del Total por Encuestas por Mes</h3>
+            <p style="color: var(--text-muted); margin-bottom: 15px; font-size: 0.95rem;">Resumen estructurado estadístico por periodos mensuales.</p>
+            <div class="table-container" style="margin-bottom: 40px; border-color: rgba(168, 85, 247, 0.3);">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Periodo (Mes / Año)</th>
+                            <th style="color: var(--accent-tabaco);">Tabaquismo</th>
+                            <th style="color: var(--accent-alcohol);">Alcoholismo</th>
+                            <th style="color: var(--accent-adicciones);">Adicciones</th>
+                            <th class="total-cell" style="text-align: center;">Total Mensual</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthly-summary-table-body"></tbody>
+                </table>
+            </div>
 
+            <h3><i class="fa-solid fa-list-ul" style="color: var(--accent-info)"></i> Detalle Individual de Encuestas</h3>
+            <p style="color: var(--text-muted); margin-bottom: 15px; font-size: 0.95rem;">Registro confidencial individual de resultados recolectados en C.M.F. Ermita.</p>
 
-
-
-
-<!-- VENTANA DE RESPUESTAS CON CONTADORES MENSUALES POR EMPLEADO -->
-<div class="dynamic-section" id="responses-window">
-    
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-        <h2><i class="fa-solid fa-users-viewfinder" style="color: var(--accent-info)"></i> Productividad Mensual por Personal</h2>
-        <button class="btn-back" onclick="goHome()"><i class="fa-solid fa-xmark"></i> Volver al Menú</button>
-    </div>
-
-    <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.95rem;">
-        Desglose de encuestas aplicadas durante el mes en curso, ordenadas individualmente por el personal que asistió.
-    </p>
-
-    <!-- 🟢 AQUÍ JAVASCRIPT INYECTARÁ LOS CONTADORES MENSUALES DE CADA TRABAJADOR -->
-    <div id="contenedor-contadores-mensuales-empleado" style="display: flex; flex-direction: column; gap: 25px;">
-        <p style="color: var(--text-muted);">Procesando datos del mes actual...</p>
-    </div>
-
-</div>
-
-
-
-
-
-
-
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha y Hora</th>
+                            <th>Encuesta</th>
+                            <th>Resultado/Nivel</th>
+                            <th>Persona que Elaboró / Asistió</th>
+                        </tr>
+                    </thead>
+                    <tbody id="responses-table-body"></tbody>
+                </table>
+            </div>
+        </div>
 
     </div> <footer>
         <div class="footer-content">
@@ -1056,77 +1073,53 @@ async function saveMonthlyGoal(e) {
             }
         }
 
+        // Calcula y dibuja la semaforización en la sección respuestas
+        function calculateResponsesSemaphore() {
+            const responses = JSON.parse(localStorage.getItem('surveyResponses')) || [];
+            const savedGoal = localStorage.getItem('surveyMonthlyGoal');
+            
+            const currentDate = new Date();
+            const currentMonth = currentDate.getMonth(); 
+            const currentYear = currentDate.getFullYear();
 
+            const totalMonthSurveys = responses.filter(r => {
+                const rDate = new Date(r.timestamp);
+                return rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear;
+            }).length;
 
+            const badge = document.getElementById('semaphore-icon-badge');
+            const title = document.getElementById('semaphore-title-text');
+            const phrase = document.getElementById('semaphore-phrase-text');
 
+            badge.className = "semaphore-badge";
 
+            if (!savedGoal) {
+                badge.innerHTML = `<i class="fa-solid fa-chart-simple"></i>`;
+                badge.classList.add('amarillo');
+                title.innerText = `Contador de este Mes: ${totalMonthSurveys} encuestas`;
+                phrase.innerText = "No se ha definido una meta mensual en el panel de administrador.";
+                return;
+            }
 
+            const goalNumber = parseInt(savedGoal);
+            const compliancePercentage = (totalMonthSurveys / goalNumber) * 100;
 
+            title.innerText = `Progreso Mensual: ${totalMonthSurveys} de ${goalNumber} encuestas (${compliancePercentage.toFixed(1)}%)`;
 
-
-
-// Calcula y dibuja la semaforización en la sección respuestas usando datos reales del servidor
-function calculateResponsesSemaphore(responsesFromServer) {
-    // CORREGIDO: Usamos los datos reales del servidor; si no hay, dejamos un arreglo vacío
-    const responses = responsesFromServer || [];
-    const savedGoal = localStorage.getItem('surveyMonthlyGoal');
-    
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth(); 
-    const currentYear = currentDate.getFullYear();
-
-    const totalMonthSurveys = responses.filter(r => {
-        const rDate = new Date(r.timestamp);
-        return rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear;
-    }).length;
-
-    const badge = document.getElementById('semaphore-icon-badge');
-    const title = document.getElementById('semaphore-title-text');
-    const phrase = document.getElementById('semaphore-phrase-text');
-
-    if (!badge || !title || !phrase) return; // Validación de seguridad por si los elementos no existen en el HTML
-
-    badge.className = "semaphore-badge";
-
-    if (!savedGoal) {
-        badge.innerHTML = `<i class="fa-solid fa-chart-simple"></i>`;
-        badge.classList.add('amarillo');
-        title.innerText = `Contador de este Mes: ${totalMonthSurveys} encuestas`;
-        phrase.innerText = "No se ha definido una meta mensual en el panel de administrador.";
-        return;
-    }
-
-    const goalNumber = parseInt(savedGoal);
-    const compliancePercentage = goalNumber > 0 ? (totalMonthSurveys / goalNumber) * 100 : 0;
-
-    title.innerText = `Progreso Mensual: ${totalMonthSurveys} de ${goalNumber} encuestas (${compliancePercentage.toFixed(1)}%)`;
-
-    if (compliancePercentage < 50) {
-        badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i>`;
-        badge.classList.add('rojo');
-        phrase.innerText = "¡Vamos arrancando! Cada encuesta cuenta para alcanzar nuestra meta mensual. ¡Sí se puede!";
-    } else if (compliancePercentage >= 50 && compliancePercentage < 90) {
-        badge.innerHTML = `<i class="fa-solid fa-bolt"></i>`;
-        badge.classList.add('amarillo');
-        phrase.innerText = "¡Buen progreso! Estamos a más de la mitad del camino. Mantengamos el ritmo.";
-    } else {
-        badge.innerHTML = `<i class="fa-solid fa-star"></i>`;
-        badge.classList.add('verde');
-        phrase.innerText = "¡Excelente trabajo! Meta casi completada o superada. Gracias por tu enorme compromiso.";
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
+            if (compliancePercentage < 50) {
+                badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i>`;
+                badge.classList.add('rojo');
+                phrase.innerText = "¡Vamos arrancando! Cada encuesta cuenta para alcanzar nuestra meta mensual. ¡Sí se puede!";
+            } else if (compliancePercentage >= 50 && compliancePercentage < 90) {
+                badge.innerHTML = `<i class="fa-solid fa-bolt"></i>`;
+                badge.classList.add('amarillo');
+                phrase.innerText = "¡Buen progreso! Estamos a más de la mitad del camino. Mantengamos el ritmo.";
+            } else {
+                badge.innerHTML = `<i class="fa-solid fa-star"></i>`;
+                badge.classList.add('verde');
+                phrase.innerText = "¡Excelente trabajo! Meta casi completada o superada. Gracias por tu enorme compromiso.";
+            }
+        }
 
         function hideAllSections() {
             document.getElementById('menu-container').style.display = 'none';
@@ -1165,85 +1158,23 @@ function calculateResponsesSemaphore(responsesFromServer) {
             }
         }
 
+        function accessResponses() {
+            const pass = prompt("Ingrese su contraseña (RFC autorizado o clave de Administrador):");
+            if (pass === null) return;
 
+            const authPersons = JSON.parse(localStorage.getItem('authorizedPersons')) || [];
+            const isAuthorizedRFC = authPersons.some(p => p.rfc.toUpperCase() === pass.toUpperCase());
 
-
-
-
-
-
-
-async function accessResponses() {
-    const pass = prompt("Ingrese su contraseña (RFC autorizado o clave de Administrador):");
-    if (pass === null || pass.trim() === "") return;
-
-    try {
-        const response = await fetch('https://encuestas-ermita-salud-mental.onrender.com/api/validar-acceso', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ clave: pass.trim() })
-        });
-        
-        if (response.ok) {
-            const resultado = await response.json();
-            const datosEncuestas = resultado.surveys; // Paquete de filas enviado por Node
-
-            // PASO 1: Ocultamos el menú principal
-            hideAllSections();
-            
-            // PASO 2: Mandamos a dibujar los bloques mensuales por empleado
-            renderStaffMonthlyCounters(datosEncuestas);
-            
-            // PASO 3: Encendemos el encabezado y tu ventana de respuestas
-            if (document.getElementById('main-header')) {
-                document.getElementById('main-header').style.display = 'block';
+            if (pass === ADMIN_PASSWORD || isAuthorizedRFC) {
+                hideAllSections();
+                calculateResponsesSemaphore(); 
+                renderResponsesTable();
+                renderMonthlySummaryTable(); // Renderiza la nueva tabla agrupada por mes
+                document.getElementById('responses-window').style.display = 'block';
+            } else {
+                alert("Acceso denegado. No es un Administrador o RFC Autorizado.");
             }
-            
-            const ventana = document.getElementById('responses-window');
-            if (ventana) {
-                ventana.style.setProperty('display', 'block', 'important');
-            }
-
-        } else {
-            alert("Acceso denegado. No es un Administrador o RFC Autorizado.");
         }
-    } catch (error) {
-        console.error('Error de acceso:', error);
-        alert("Ocurrió un error al conectar con el servidor.");
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-// FUNCIÓN AUXILIAR: Para asegurar que los datos de MySQL se inyecten en tu HTML
-function dibujarTablaRespuestas(datos) {
-    const contenedor = document.getElementById('responses-window'); // O el ID de tu tabla/tbody
-    if (!contenedor || !datos || datos.length === 0) {
-        console.warn("No hay datos para mostrar o no se encontró el contenedor HTML.");
-        return;
-    }
-    
-    // Aquí limpias y creas las filas de tu tabla dinámicamente con los datos de MySQL
-    // Ejemplo rápido (ajústalo a los nombres de tus columnas de MySQL):
-    let html = '<table><tr><th>ID</th><th>RFC</th><th>Respuesta</th></tr>';
-    datos.forEach(fila => {
-        html += `<tr><td>${fila.id}</td><td>${fila.rfc || ''}</td><td>${fila.resultado || ''}</td></tr>`;
-    });
-    html += '</table>';
-    
-    contenedor.innerHTML = html; 
-}
-
-
-
 
 
 
@@ -1695,67 +1626,30 @@ async function populateAssistantSelect() {
 
 
 
-function renderResponsesTable(responses) {
-    const tbody = document.getElementById('responses-table-body');
-    if (!tbody) return [];
-
-    if (!responses || responses.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:15px;">No hay encuestas.</td></tr>`;
-        return [];
-    }
-
-    let html = '';
-    responses.forEach(r => {
-        const fecha = r.timestamp ? new Date(r.timestamp).toLocaleDateString('es-MX') : 'No especificada';
-        const diagnostico = r.diagnostic || 'Sin diagnóstico';
-        const categoria = r.keyCategory || 'General';
-        const asistente = r.assistant || 'No especificado';
-
-        html += `
-            <tr style="border-bottom: 1px solid #334155;">
-                <td style="padding: 10px;">${fecha}</td>
-                <td style="padding: 10px; text-transform: capitalize;">${categoria}</td>
-                <td style="padding: 10px;">● ${diagnostico}</td>
-                <td style="padding: 10px;">${asistente}</td>
-            </tr>
-        `;
-    });
-
-    tbody.innerHTML = html;
-    return responses;
-}
 
 
 
 
 
 
+        // NUEVO: Generar tabla agregada con contadores desglosados por mes y año
+        function renderMonthlySummaryTable() {
+            const tbody = document.getElementById('monthly-summary-table-body');
+            const responses = JSON.parse(localStorage.getItem('surveyResponses')) || [];
 
+            if (responses.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="empty-message">No existen registros mensuales analizados.</td></tr>`;
+                return;
+            }
 
+            const monthsNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            
+            // Estructura contenedora indexada por "Año-Mes"
+            const monthlyGroups = {};
 
-
-// REEMPLAZO COMPLETO: Ahora recibe los datos directamente por parámetro
-function renderMonthlySummaryTable(responses) {
-    const tbody = document.getElementById('monthly-summary-table-body');
-    if (!tbody) return;
-
-    try {
-        // En lugar de hacer fetch, validamos los datos que ya tenemos en memoria
-        if (!responses || !Array.isArray(responses) || responses.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="empty-message">No existen registros mensuales analizados.</td></tr>`;
-            return;
-        }
-
-        const monthsNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-        const monthlyGroups = {};
-
-        responses.forEach(r => {
-            try {
-                if (!r) return;
-                
-                const rDate = r.timestamp ? new Date(r.timestamp) : new Date();
-                if (isNaN(rDate.getTime())) return;
-
+            responses.forEach(r => {
+                if (!r.timestamp) return;
+                const rDate = new Date(r.timestamp);
                 const year = rDate.getFullYear();
                 const monthIdx = rDate.getMonth();
                 const groupKey = `${year}-${monthIdx.toString().padStart(2, '0')}`;
@@ -1770,237 +1664,62 @@ function renderMonthlySummaryTable(responses) {
                     };
                 }
 
-                // OPTIMIZACIÓN: Convertimos a minúsculas y limpiamos espacios para evitar fallos de coincidencia exactas
-                const categoriaLimpia = String(r.keyCategory).toLowerCase().trim();
+                if (r.keyCategory === 'tabaquismo') monthlyGroups[groupKey].tabaquismo++;
+                else if (r.keyCategory === 'alcoholismo') monthlyGroups[groupKey].alcoholismo++;
+                else if (r.keyCategory === 'adicciones') monthlyGroups[groupKey].adicciones++;
+            });
 
-                if (categoriaLimpia === 'tabaquismo') monthlyGroups[groupKey].tabaquismo++;
-                else if (categoriaLimpia === 'alcoholismo') monthlyGroups[groupKey].alcoholismo++;
-                else if (categoriaLimpia === 'adicciones') monthlyGroups[groupKey].adicciones++;
-            } catch (errorFila) {
-                console.error("Error al agrupar un mes individual:", errorFila);
-            }
-        });
+            // Ordenar las claves de forma descendente (mes más reciente primero)
+            const sortedKeys = Object.keys(monthlyGroups).sort((a, b) => b.localeCompare(a));
 
-        const sortedKeys = Object.keys(monthlyGroups).sort((a, b) => b.localeCompare(a));
-
-        tbody.innerHTML = sortedKeys.map(key => {
-            const group = monthlyGroups[key];
-            const totalMonth = group.tabaquismo + group.alcoholismo + group.adicciones;
-            return `
-                <tr>
-                    <td style="font-weight: 600; color: var(--text-main);">${group.label}</td>
-                    <td style="font-weight: 700; color: var(--accent-tabaco);">${group.tabaquismo}</td>
-                    <td style="font-weight: 700; color: var(--accent-alcohol);">${group.alcoholismo}</td>
-                    <td style="font-weight: 700; color: var(--accent-adicciones);">${group.adicciones}</td>
-                    <td class="total-cell" style="text-align: center; font-size:1.1rem;">${totalMonth}</td>
-                </tr>
-            `;
-        }).join('');
-
-    } catch (error) {
-        console.error('Error al renderizar la tabla de resumen mensual:', error);
-        tbody.innerHTML = `<tr><td colspan="5" class="empty-message" style="color: red;">Error al procesar el resumen mensual.</td></tr>`;
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-function renderStaffCounters(responses) {
-    const contenedor = document.getElementById('contenedor-tarjetas-encuestadores');
-    if (!contenedor) return;
-
-    if (!responses || !Array.isArray(responses) || responses.length === 0) {
-        contenedor.innerHTML = `<p style="color: #94a3b8; text-align: center; padding: 20px;">No hay encuestas registradas para contabilizar.</p>`;
-        return;
-    }
-
-    const conteoPersonal = {};
-
-    responses.forEach(r => {
-        if (!r) return;
-        
-        // 1. Limpiamos el nombre del asistente
-        const nombreAsistente = r.assistant ? r.assistant.trim().toUpperCase() : 'PERSONAL NO ESPECIFICADO';
-        
-        // 2. Limpiamos la categoría quitándole espacios, convirtiendo a minúsculas y removiendo acentos
-        let categoria = r.keyCategory ? String(r.keyCategory).toLowerCase().trim() : '';
-        
-        // Removemos acentos por si acaso viene "tabaquísmo" o "adicción"
-        categoria = categoria.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-        if (!conteoPersonal[nombreAsistente]) {
-            conteoPersonal[nombreAsistente] = { tabaquismo: 0, alcoholismo: 0, adicciones: 0, total: 0 };
+            tbody.innerHTML = sortedKeys.map(key => {
+                const group = monthlyGroups[key];
+                const totalMonth = group.tabaquismo + group.alcoholismo + group.adicciones;
+                return `
+                    <tr>
+                        <td style="font-weight: 600; color: var(--text-main);"><i class="fa-regular fa-calendar"></i> ${group.label}</td>
+                        <td style="font-weight: 700; color: var(--accent-tabaco);">${group.tabaquismo}</td>
+                        <td style="font-weight: 700; color: var(--accent-alcohol);">${group.alcoholismo}</td>
+                        <td style="font-weight: 700; color: var(--accent-adicciones);">${group.adicciones}</td>
+                        <td class="total-cell" style="text-align: center; font-size:1.1rem;">${totalMonth}</td>
+                    </tr>
+                `;
+            }).join('');
         }
 
-        // 3. COMPARACIÓN FLEXIBLE: Busca si el texto contiene la palabra clave
-        if (categoria.includes('tabaco') || categoria.includes('tabaquismo')) {
-            conteoPersonal[nombreAsistente].tabaquismo++;
-        } else if (categoria.includes('alcohol') || categoria.includes('alcoholismo')) {
-            conteoPersonal[nombreAsistente].alcoholismo++;
-        } else if (categoria.includes('adiccion') || categoria.includes('adicciones')) {
-            conteoPersonal[nombreAsistente].adicciones++;
-        }
-        
-        conteoPersonal[nombreAsistente].total++;
-    });
 
-    // 4. Si después de procesar todo, el objeto de conteo se quedó vacío por alguna razón extraña
-    if (Object.keys(conteoPersonal).length === 0) {
-        contenedor.innerHTML = `<p style="color: #94a3b8; text-align: center; padding: 20px;">Se recibieron datos, pero las categorías no coinciden con tabaquismo, alcoholismo o adicciones.</p>`;
+
+
+function renderResponsesTable() {
+    const tbody = document.getElementById('responses-table-body');
+    const responses = JSON.parse(localStorage.getItem('surveyResponses')) || [];
+
+    // Cambiado a colspan="4" para cubrir la nueva columna si no hay datos
+    if (responses.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty-message">No se han completado encuestas todavía.</td></tr>`;
         return;
     }
 
-    // 5. Construimos las tarjetas visuales
-    let htmlFinal = '';
-
-    Object.keys(conteoPersonal).forEach(nombre => {
-        const datos = conteoPersonal[nombre];
-        htmlFinal += `
-            <div style="background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px;">
-                <h4 style="margin-top: 0; margin-bottom: 15px; color: #f8fafc; font-size: 1.1rem; border-left: 4px solid #38bdf8; padding-left: 10px; text-transform: uppercase;">
-                    ${nombre} <span style="font-size: 0.9rem; color: #94a3b8; font-weight: normal;">(Total: ${datos.total})</span>
-                </h4>
-                
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center;">
-                    <div style="background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 10px;">
-                        <span style="display: block; font-size: 1.5rem; font-weight: bold; color: #ef4444;">${datos.tabaquismo}</span>
-                        <span style="font-size: 0.85rem; color: #94a3b8;">Tabaquismo</span>
-                    </div>
-                    <div style="background: rgba(245, 158, 11, 0.1); padding: 10px; border-radius: 10px;">
-                        <span style="display: block; font-size: 1.5rem; font-weight: bold; color: #f59e0b;">${datos.alcoholismo}</span>
-                        <span style="font-size: 0.85rem; color: #94a3b8;">Alcoholismo</span>
-                    </div>
-                    <div style="background: rgba(168, 85, 247, 0.1); padding: 10px; border-radius: 10px;">
-                        <span style="display: block; font-size: 1.5rem; font-weight: bold; color: #a855f7;">${datos.adicciones}</span>
-                        <span style="font-size: 0.85rem; color: #94a3b8;">Adicciones</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-
-    contenedor.innerHTML = htmlFinal;
+    tbody.innerHTML = responses.map(r => `
+        <tr>
+            <td>${r.date}</td>
+            <td style="font-weight:600;">${r.category}</td>
+            <td>
+                <span style="color: ${r.diagnostic.includes('Alto') ? 'var(--accent-alcohol)' : r.diagnostic.includes('Moderado') ? 'var(--accent-tabaco)' : 'var(--accent-adicciones)'}">
+                    ● ${r.diagnostic}
+                </span>
+            </td>
+            <!-- NUEVA CELDA: Muestra el nombre de la persona seleccionada -->
+            <td>${r.assistant || 'No especificado'}</td>
+        </tr>
+    `).join('');
 }
-
-
-
-
-
-function renderStaffMonthlyCounters(responses) {
-    const contenedor = document.getElementById('contenedor-contadores-mensuales-empleado');
-    if (!contenedor) return;
-
-    if (!responses || !Array.isArray(responses) || responses.length === 0) {
-        contenedor.innerHTML = `<p style="color: #94a3b8; text-align: center; padding: 20px;">No hay encuestas registradas en la base de datos.</p>`;
-        return;
-    }
-
-    // 1. Obtener el mes y año actual de la computadora para filtrar de forma estricta
-    const hoy = new Date();
-    const anioActual = hoy.getFullYear();
-    const mesActual = hoy.getMonth(); // 0 = Enero, 1 = Febrero, etc.
-
-    const conteoMensualPersonal = {};
-
-    // 2. Procesamos y filtramos los datos de Clever Cloud
-    responses.forEach(r => {
-        if (!r) return;
-
-        // Validamos la fecha del registro para asegurar que sea del mes en curso
-        const fechaRegistro = r.timestamp ? new Date(r.timestamp) : null;
-        const esDelMesActual = fechaRegistro && 
-                               fechaRegistro.getFullYear() === anioActual && 
-                               fechaRegistro.getMonth() === mesActual;
-
-        // ¡SI NO ES DEL MES ACTUAL, IGNORAMOS LA ENCUESTA!
-        if (!esDelMesActual) return;
-
-        // Extraemos y limpiamos el nombre del empleado y la categoría
-        const nombreEmpleado = r.assistant ? r.assistant.trim().toUpperCase() : 'PERSONAL NO ESPECIFICADO';
-        const categoria = r.keyCategory ? r.keyCategory.toLowerCase().trim() : '';
-
-        // Si es la primera encuesta del mes para este empleado, inicializamos sus 3 contadores
-        if (!conteoMensualPersonal[nombreEmpleado]) {
-            conteoMensualPersonal[nombreEmpleado] = { tabaquismo: 0, alcoholismo: 0, adicciones: 0, totalMes: 0 };
-        }
-
-        // Sumamos al contador del mes correspondiente de este empleado específico
-        if (categoria === 'tabaquismo') conteoMensualPersonal[nombreEmpleado].tabaquismo++;
-        else if (categoria === 'alcoholismo') conteoMensualPersonal[nombreEmpleado].alcoholismo++;
-        else if (categoria === 'adicciones') conteoMensualPersonal[nombreEmpleado].adicciones++;
-        
-        conteoMensualPersonal[nombreEmpleado].totalMes++;
-    });
-
-    // 3. Si no hubo ninguna encuesta en todo el mes actual
-    if (Object.keys(conteoMensualPersonal).length === 0) {
-        contenedor.innerHTML = `<p style="color: #94a3b8; text-align: center; padding: 20px;">⚠️ No se han aplicado encuestas por ningún empleado durante el mes en curso.</p>`;
-        return;
-    }
-
-    // 4. Fabricamos los bloques visuales usando exactamente tus clases CSS del menú
-    let htmlFinal = '';
-
-    Object.keys(conteoMensualPersonal).forEach(nombre => {
-        const datos = conteoMensualPersonal[nombre];
-
-        htmlFinal += `
-            <div class="community-counter-box" style="margin-bottom: 5px; width: 100%;">
-                <h3 style="border-bottom: 1px solid var(--card-border); padding-bottom: 10px; margin-bottom: 15px; text-transform: uppercase; font-size: 1.05rem; color: #f8fafc;">
-                    <i class="fa-solid fa-user-md" style="color: var(--accent-info); margin-right: 8px;"></i> 
-                    ${nombre} 
-                    <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: normal; float: right; background: rgba(255,255,255,0.05); padding: 2px 10px; border-radius: 20px;">
-                        Total Mes: ${datos.totalMes}
-                    </span>
-                </h3>
-                <div class="counter-grid">
-                    <div class="counter-item">
-                        <span class="counter-number count-tabaco-m">${datos.tabaquismo}</span>
-                        <span class="counter-label">Tabaquismo (Mes)</span>
-                    </div>
-                    <div class="counter-item">
-                        <span class="counter-number count-alcohol-m">${datos.alcoholismo}</span>
-                        <span class="counter-label">Alcoholismo (Mes)</span>
-                    </div>
-                    <div class="counter-item">
-                        <span class="counter-number count-adicciones-m">${datos.adicciones}</span>
-                        <span class="counter-label">Adicciones (Mes)</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-
-    contenedor.innerHTML = htmlFinal;
-}
-
-
-
-
-
 
 
 
 
 
     </script>
+<script src="js/app.js"></script>
 </body>
 </html>

@@ -48,62 +48,13 @@ function handleDisconnect() {
 // Inicializamos la conexión automática
 handleDisconnect();
 
-
-
-
-
-
-
 // =========================================================================
 // 3. RUTAS DE LA API
 // =========================================================================
 
-
-
-
-// CORREGIDO: Ahora busca el RFC directamente en la tabla real 'employees'
-app.post('/api/validar-acceso', (req, res) => {
-    const { clave } = req.body;
-
-    // 1. Validamos el RFC contra la tabla 'employees' o si es la clave maestra de Admin
-    // NOTA: Si usas una clave de Admin general, puedes dejarla fija (ej. 'ADMIN123')
-    const queryValidar = "SELECT * FROM employees WHERE rfc = ? OR ? = 'ADMIN123'";
-    
-    db.query(queryValidar, [clave, clave], (err, usuario) => {
-        if (err) {
-            console.error('Error al validar acceso en employees:', err);
-            return res.status(500).json({ error: 'Error interno del servidor' });
-        }
-        
-        // Si no se encontró el RFC en la tabla employees
-        if (usuario.length === 0) {
-            return res.status(401).json({ mensaje: 'No autorizado. RFC no registrado.' });
-        }
-
-        // 2. Si el RFC existe, traemos las encuestas de la tabla 'survey_responses'
-        const queryEncuestas = 'SELECT timestamp, diagnostic, keyCategory, assistant FROM survey_responses ORDER BY timestamp DESC';
-        db.query(queryEncuestas, (errDb, rows) => {
-            if (errDb) {
-                console.error('Error al consultar survey_responses:', errDb);
-                return res.status(500).json({ error: 'Error al consultar MySQL' });
-            }
-
-            // Enviamos estatus 200 y el paquete con todas las encuestas registradas
-            return res.status(200).json({
-                success: true,
-                surveys: rows // Estos datos alimentarán tus tablas en el frontend
-            });
-        });
-    });
-});
-
-
-
-
-
-
-// RUTA API: Obtener la lista de todos los empleados
+// RUTA API: Obtener la lista de todos los empleados (Antes doctors)
 app.get('/api/doctors', (req, res) => {
+    // CAMBIO: Ahora consulta a la tabla employees
     const sql = 'SELECT rfc, name FROM employees ORDER BY name ASC';
     db.query(sql, (err, results) => {
         if (err) {
@@ -114,13 +65,16 @@ app.get('/api/doctors', (req, res) => {
     });
 });
 
-// RUTA API: Guardar empleados
+
+
+// RUTA API: Guardar empleados (Antes doctors)
 app.post('/api/doctors', (req, res) => {
     const { rfc, name } = req.body;
     if (!rfc || !name) {
         return res.status(400).json({ message: 'El nombre y el RFC son campos obligatorios.' });
     }
 
+    // CAMBIO: Ahora verifica en la tabla employees
     const checkSql = 'SELECT * FROM employees WHERE rfc = ?';
     db.query(checkSql, [rfc], (err, results) => {
         if (err) {
@@ -131,6 +85,7 @@ app.post('/api/doctors', (req, res) => {
             return res.status(400).json({ message: 'Este RFC ya se encuentra registrado en el sistema.' });
         }
 
+        // CAMBIO: Ahora inserta en la tabla employees
         const insertSql = 'INSERT INTO employees (rfc, name) VALUES (?, ?)';
         db.query(insertSql, [rfc, name], (err, result) => {
             if (err) {
@@ -141,6 +96,10 @@ app.post('/api/doctors', (req, res) => {
         });
     });
 });
+
+
+
+
 
 // RUTA API: Eliminar un empleado por su RFC
 app.delete('/api/doctors/:rfc', (req, res) => {
@@ -155,6 +114,17 @@ app.delete('/api/doctors/:rfc', (req, res) => {
         res.status(200).json({ message: 'Usuario eliminado correctamente.' });
     });
 });
+
+
+
+
+
+
+
+
+
+
+
 
 // RUTA API: Guardar o actualizar la meta mensual
 app.post('/api/goals', (req, res) => {
@@ -195,20 +165,6 @@ app.post('/api/surveys', (req, res) => {
     });
 });
 
-// RUTA API GENERAL: Obtener todas las encuestas registradas para la tabla de administración
-app.get('/api/surveys', (req, res) => {
-    const sql = 'SELECT keyCategory, diagnostic, assistant, timestamp FROM survey_responses ORDER BY timestamp DESC';
-    
-    db.query(sql, (err, results) => {
-        if (err) {
-            console.error('Error al consultar encuestas en MySQL:', err);
-            return res.status(500).json([]);
-        }
-        const filasReales = (results && Array.isArray(results)) ? results : [];
-        res.status(200).json(filasReales);
-    });
-});
-
 // RUTA API: Obtener estadísticas y contadores unificados
 app.get('/api/stats', (req, res) => {
     const hoy = new Date();
@@ -233,6 +189,7 @@ app.get('/api/stats', (req, res) => {
             return res.status(500).json({ message: 'Error interno en el servidor.' });
         }
 
+        // Extraemos de forma segura el primer registro de la fila única
         const stats = (results && results.length > 0) ? results[0] : {
             globalTabaco: 0, globalAlcohol: 0, globalAdicciones: 0,
             monthTabaco: 0, monthAlcohol: 0, monthAdicciones: 0, savedGoal: 0
@@ -245,15 +202,6 @@ app.get('/api/stats', (req, res) => {
         res.status(200).json(stats);
     });
 });
-
-
-
-
-
-
-
-
-
 
 // =========================================================================
 // 4. RUTA PARA SERVIR EL HTML (Abajo de la API)
