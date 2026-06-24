@@ -631,7 +631,7 @@ table td:last-child {
 
     <!-- Cambia este número manualmente cada vez que vayas a actualizar Git -->
     <div style="font-size: 0.9em; color: #ff9800; font-weight: bold; margin-top: 5px;">
-        v2.0.0
+        v3.0.0
     </div>
         </header>
 
@@ -1157,37 +1157,38 @@ async function saveMonthlyGoal(e) {
 // Asegúrate de que esta variable esté declarada arriba en tu código
 // Forzamos la declaración limpia de la función
 function accessResponses() {
-    try {
-        console.log("Botón presionado correctamente");
+    const pass = prompt("Ingrese la contraseña de Administrador:");
+    if (pass === ADMIN_PASSWORD) {
+        // 1. Apagamos todas las pantallas activas igual que en Administrador
+        hideAllSections();
         
-        // 1. Pedir contraseña
-        var inputPassword = prompt("Por favor, introduce la contraseña de Administrador:");
+        // 2. Buscamos tu contenedor de respuestas
+        const responsesWindow = document.getElementById('responses-window');
         
-        if (inputPassword === null) return;
-
-        // 2. Validar con la contraseña fija
-        if (inputPassword === "ViperMístico") {
-            var responsesWindow = document.getElementById("responses-window");
-            if (responsesWindow) {
-                responsesWindow.style.display = "block";
-                console.log("Ventana mostrada con éxito");
-            } else {
-                alert("Error: El contenedor 'responses-window' no existe en el HTML.");
-            }
+        if (responsesWindow) {
+            // 3. Inyectamos la frase fija de forma limpia
+            responsesWindow.innerHTML = `
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-database"></i> Panel de Administración</h2>
+                    <button class="btn-back" onclick="goHome()"><i class="fa-solid fa-xmark"></i> Volver</button>
+                </div>
+                <div style="text-align: center; padding: 40px; margin-top: 20px; background: rgba(168, 85, 247, 0.1); border: 2px dashed var(--accent-adicciones, #a855f7); border-radius: 8px;">
+                    <h1 style="color: #4caf50; font-size: 2rem; margin: 0;">¡Por fin veo la información!</h1>
+                </div>
+            `;
+            
+            // 4. Lo mostramos usando exactamente el mismo método que le funciona a admin-window
+            responsesWindow.style.display = 'block';
         } else {
-            alert("Contraseña incorrecta. Acceso denegado.");
+            alert("Error: El contenedor 'responses-window' no existe en el HTML.");
         }
-    } catch (error) {
-        alert("Ocurrió un error en el código: " + error.message);
+
+    } else if (pass !== null) {
+        alert("Contraseña Incorrecta.");
     }
 }
 
-function goHome() {
-    var responsesWindow = document.getElementById("responses-window");
-    if (responsesWindow) {
-        responsesWindow.style.display = "none";
-    }
-}
+
 
 
 
