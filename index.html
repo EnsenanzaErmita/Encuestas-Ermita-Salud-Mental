@@ -631,7 +631,7 @@ table td:last-child {
 
     <!-- Cambia este número manualmente cada vez que vayas a actualizar Git -->
     <div style="font-size: 0.9em; color: #ff9800; font-weight: bold; margin-top: 5px;">
-        v6.0.0
+        v7.0.0
     </div>
         </header>
 
@@ -1148,87 +1148,32 @@ async function saveMonthlyGoal(e) {
 <script>
 function accessResponses() {
     const pass = prompt("Ingrese la contraseña de Administrador:");
+    if (pass === null) return; // Si cancela, se detiene pacíficamente
+
+    // Usa tu constante ADMIN_PASSWORD que ya existe arriba en tu código
     if (pass === ADMIN_PASSWORD) {
-        hideAllSections();
+        // Ocultamos el contenedor principal
+        const menuCont = document.getElementById('menu-container');
+        if (menuCont) menuCont.style.display = 'none';
         
+        // Mostramos la frase fija en el contenedor validado por tu CSS
         const adminWindow = document.getElementById('admin-window');
-        if (!adminWindow) {
-            alert("Error: No se encontró el contenedor de administración.");
-            return;
+        if (adminWindow) {
+            adminWindow.innerHTML = `
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-database"></i> Panel de Administración</h2>
+                    <button class="btn-back" onclick="location.reload()"><i class="fa-solid fa-xmark"></i> Volver</button>
+                </div>
+                <div style="text-align: center; padding: 40px; margin-top: 20px; background: rgba(168, 85, 247, 0.1); border: 2px dashed #a855f7; border-radius: 8px;">
+                    <h1 style="color: #4caf50; font-size: 2rem; margin: 0; font-family: sans-serif;">¡Por fin veo la información!</h1>
+                </div>
+            `;
+            adminWindow.style.display = 'block';
         }
-
-        // Inyectamos la estructura limpia de la tabla de MySQL
-        adminWindow.innerHTML = `
-            <div class="section-header">
-                <h2><i class="fa-solid fa-database"></i> Detalle Individual de Encuestas</h2>
-                <button class="btn-back" onclick="location.reload()"><i class="fa-solid fa-xmark"></i> Volver</button>
-            </div>
-            <p style="color: var(--text-muted); margin-bottom: 15px; font-size: 0.95rem;">
-                Registro de resultados recolectados en C.M.F. Ermita.
-            </p>
-            
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Fecha y Hora</th>
-                            <th>Encuesta</th>
-                            <th>Resultado/Nivel</th>
-                            <th>Persona que Elaboró / Asistió</th>
-                        </tr>
-                    </thead>
-                    <tbody id="responses-dinamicas-body">
-                        <tr><td colspan="4" style="text-align:center; padding:20px;">Cargando registros desde la base de datos...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        `;
-        
-        adminWindow.style.display = 'block';
-
-        // Consultamos la base de datos en Clever Cloud
-        fetch('/api/admin-surveys')
-            .then(response => {
-                if (!response.ok) throw new Error('Error en el servidor');
-                return response.json();
-            })
-            .then(data => {
-                const tbody = document.getElementById('responses-dinamicas-body');
-                if (!tbody) return;
-                
-                if (data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px;">No hay encuestas registradas todavía.</td></tr>`;
-                    return;
-                }
-
-                tbody.innerHTML = ''; // Limpiamos el cargando
-
-                data.forEach(item => {
-                    const fechaFormateada = new Date(item.timestamp).toLocaleString('es-MX');
-                    const fila = document.createElement('tr');
-                    fila.innerHTML = `
-                        <td>${fechaFormateada}</td>
-                        <td style="text-transform: capitalize; font-weight: bold;">${item.keyCategory}</td>
-                        <td>${item.diagnostic}</td>
-                        <td>${item.assistant || 'No especificado'}</td>
-                    `;
-                    tbody.appendChild(fila);
-                });
-            })
-            .catch(error => {
-                console.error(error);
-                const tbody = document.getElementById('responses-dinamicas-body');
-                if (tbody) {
-                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red; padding:20px;">Error al conectar con la base de datos.</td></tr>`;
-                }
-            });
-
-    } else if (pass !== null) {
+    } else {
         alert("Contraseña Incorrecta.");
     }
 }
-
-
 
 
 
@@ -1787,6 +1732,5 @@ function renderResponsesTable() {
 
 
     </script>
-<script src="js/app.js"></script>
 </body>
 </html>
