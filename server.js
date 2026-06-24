@@ -203,6 +203,49 @@ app.get('/api/stats', (req, res) => {
     });
 });
 
+
+
+
+
+
+
+
+// NUEVA RUTA: Obtiene las encuestas del mes actual para los bloques dinámicos
+app.get('/api/surveys/current-month', (req, res) => {
+    const hoy = new Date();
+    const monthYear = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`; 
+
+    // Trae las encuestas del mes actual indicando categoría y el asistente (RFC o Nombre)
+    const sql = `
+        SELECT keyCategory, assistant 
+        FROM survey_responses 
+        WHERE DATE_FORMAT(timestamp, '%Y-%m') = ?
+    `;
+
+    db.query(sql, [monthYear], (err, results) => {
+        if (err) {
+            console.error('Error al obtener encuestas mensuales:', err);
+            return res.status(500).json({ message: 'Error al obtener los registros.' });
+        }
+        res.status(200).json(results);
+    });
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // =========================================================================
 // 4. RUTA PARA SERVIR EL HTML (Abajo de la API)
 // =========================================================================
