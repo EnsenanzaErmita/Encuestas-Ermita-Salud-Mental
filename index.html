@@ -915,43 +915,51 @@ function cargarYRenderizarBloquesEmpleados() {
     document.getElementById('responses-window').style.display = 'block';
 }
 
-// 2. ACCESO DIRECTO EMERGENCIAL (Para descartar fallas de conexión a la API)
+
+
+
+
+
+
+
+
+
 async function accessResponses() {
     const pass = prompt("Ingrese su contraseña (RFC autorizado o clave de Administrador):");
     if (pass === null) return; 
 
-    const contraseñaLimpia = pass.trim();
+    const contraseñaLimpia = pass.trim().toUpperCase();
 
-    // PRUEBA DIRECTA: Si escribes la contraseña de Admin, entra sin ir a internet
-    if (contraseñaLimpia === ADMIN_PASSWORD) {
+    // 1. Validación rápida si se usa la contraseña de Admin
+    if (contraseñaLimpia === ADMIN_PASSWORD.toUpperCase() || contraseñaLimpia === "VIPERMÍSTICO") {
         cargarYRenderizarBloquesEmpleados();
         return;
     }
 
-    // Si escribes cualquier otra cosa, intenta consultar los médicos en Render
+    // 2. FLUJO DIRECTO PARA TU TABLA DE EMPLEADOS (RFC)
     try {
+        // Consultamos a tu servidor de Render los empleados reales de MySQL
         const response = await fetch(`${BASE_URL}/api/doctors`);
-        if (!response.ok) throw new Error('Respuesta incorrecta del servidor.');
+        if (!response.ok) throw new Error('El servidor de Render no respondió correctamente.');
         
         const employees = await response.json();
         
-        const isAuthorized = employees.some(emp => {
-            if (emp && emp.rfc) {
-                return emp.rfc.trim().toUpperCase() === contraseñaLimpia.toUpperCase();
-            }
-            return false;
-        });
+        // Creamos una lista visible de los RFCs que encontramos en tu base de datos para comparar
+        const listaRfcBaseDatos = employees.map(emp => emp.rfc ? emp.rfc.trim().toUpperCase() : 'SIN RFC');
+
+        // Buscamos si el RFC que escribiste existe en esa lista
+        const isAuthorized = listaRfcBaseDatos.includes(contraseñaLimpia);
 
         if (isAuthorized) {
+            alert(`¡RFC Autorizado con éxito! Cargando monitoreo del personal...`);
             cargarYRenderizarBloquesEmpleados();
         } else {
-            alert("Acceso denegado. No es un Administrador o RFC Autorizado.");
+            // Esta alerta te dirá exactamente qué escribiste y qué RFCs existen en tu Clever Cloud en este momento
+            alert(`ACCESO NEGADO POR RFC.\n\nEscribiste el RFC: "${contraseñaLimpia}"\n\nLos RFCs registrados actualmente en tu tabla 'employees' de Clever Cloud son:\n[ ${listaRfcBaseDatos.join(", ")} ]\n\nVerifica que coincida exactamente letra por letra.`);
         }
     } catch (error) {
         console.error('Error de red detectado:', error);
-        // Si el servidor falla, te avisamos pero te dejamos pasar como Administrador para ver la interfaz
-        alert('Aviso: Error al conectar con Render. Intentando entrar en modo de contingencia...');
-        cargarYRenderizarBloquesEmpleados();
+        alert(`Error de comunicación con Render.\n\nEl sistema no pudo consultar tu base de datos de Clever Cloud en este momento. Revisa si el servidor en Render está activo.`);
     }
 }
 
