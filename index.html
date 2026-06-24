@@ -844,6 +844,117 @@ table td:last-child {
 const BASE_URL = 'https://encuestas-ermita-salud-mental.onrender.com'; // <-- Tu URL de Render
 
 
+
+
+
+
+
+// =========================================================================
+// ELEMENTOS DE CONTROL INDEPENDIENTES (PUESTOS HASTA ARRIBA PARA EVITAR ERRORES)
+// =========================================================================
+
+// 1. FUNCIÓN DE PRUEBA VISUAL (Aislada de la base de datos)
+function cargarYRenderizarBloquesEmpleados() {
+    hideAllSections();
+    
+    const container = document.getElementById('employees-cards-container');
+    if (!container) {
+        alert("ERROR CRÍTICO: No se encontró el contenedor 'employees-cards-container' en el HTML. Verifica que agregaste el <div id='employees-cards-container'>.");
+        return;
+    }
+    
+    // Inyección forzada de la tarjeta de prueba idéntica al menú principal
+    container.innerHTML = `
+        <div class="community-counter-box" style="background: rgba(255, 255, 255, 0.04); text-align: left; padding: 25px; margin-top: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;">
+                <h3 style="background: linear-gradient(to right, #6366f1, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; font-size: 1.4rem; font-weight: 600;">
+                    <i class="fa-solid fa-user-doctor"></i> BLOQUE DE PRUEBA VISUAL (DR. JAVIER LOPEZ)
+                </h3>
+                <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 50px;">
+                    RFC: ABCD123456XYZ
+                </span>
+            </div>
+            
+            <div class="counter-grid">
+                <div class="counter-item">
+                    <span class="counter-number count-tabaco-m">10</span>
+                    <span class="counter-label">Tabaquismo (Mes)</span>
+                </div>
+                <div class="counter-item">
+                    <span class="counter-number count-alcohol-m">25</span>
+                    <span class="counter-label">Alcoholismo (Mes)</span>
+                </div>
+                <div class="counter-item">
+                    <span class="counter-number count-adicciones-m">5</span>
+                    <span class="counter-label">Adicciones (Mes)</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Activamos la visibilidad de la ventana de respuestas
+    document.getElementById('responses-window').style.display = 'block';
+}
+
+// 2. ACCESO DIRECTO EMERGENCIAL (Para descartar fallas de conexión a la API)
+async function accessResponses() {
+    const pass = prompt("Ingrese su contraseña (RFC autorizado o clave de Administrador):");
+    if (pass === null) return; 
+
+    const contraseñaLimpia = pass.trim();
+
+    // PRUEBA DIRECTA: Si escribes la contraseña de Admin, entra sin ir a internet
+    if (contraseñaLimpia === ADMIN_PASSWORD) {
+        cargarYRenderizarBloquesEmpleados();
+        return;
+    }
+
+    // Si escribes cualquier otra cosa, intenta consultar los médicos en Render
+    try {
+        const response = await fetch(`${BASE_URL}/api/doctors`);
+        if (!response.ok) throw new Error('Respuesta incorrecta del servidor.');
+        
+        const employees = await response.json();
+        
+        const isAuthorized = employees.some(emp => {
+            if (emp && emp.rfc) {
+                return emp.rfc.trim().toUpperCase() === contraseñaLimpia.toUpperCase();
+            }
+            return false;
+        });
+
+        if (isAuthorized) {
+            cargarYRenderizarBloquesEmpleados();
+        } else {
+            alert("Acceso denegado. No es un Administrador o RFC Autorizado.");
+        }
+    } catch (error) {
+        console.error('Error de red detectado:', error);
+        // Si el servidor falla, te avisamos pero te dejamos pasar como Administrador para ver la interfaz
+        alert('Aviso: Error al conectar con Render. Intentando entrar en modo de contingencia...');
+        cargarYRenderizarBloquesEmpleados();
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         // Inicializar bases de datos locales al cargar
         window.addEventListener('DOMContentLoaded', () => {
             if (!localStorage.getItem('authorizedPersons')) {
@@ -1711,89 +1822,6 @@ function renderResponsesTable() {
 
 
 
-
-// =========================================================================
-// 1. FUNCIÓN DE ACCESO (Asegúrate de que reemplace por completo la anterior)
-// =========================================================================
-async function accessResponses() {
-    const pass = prompt("Ingrese su contraseña (RFC autorizado o clave de Administrador):");
-    if (pass === null) return; 
-
-    const contraseñaLimpia = pass.trim();
-
-    if (contraseñaLimpia === ADMIN_PASSWORD) {
-        cargarYRenderizarBloquesEmpleados();
-        return;
-    }
-
-    try {
-        const response = await fetch(`${BASE_URL}/api/doctors`);
-        if (!response.ok) throw new Error('Error al conectar con el servidor.');
-        
-        const employees = await response.json();
-        
-        const isAuthorized = employees.some(emp => {
-            if (emp && emp.rfc) {
-                return emp.rfc.trim().toUpperCase() === contraseñaLimpia.toUpperCase();
-            }
-            return false;
-        });
-
-        if (isAuthorized) {
-            cargarYRenderizarBloquesEmpleados();
-        } else {
-            alert(`Acceso denegado.\n\nEl texto "${contraseñaLimpia}" no coincide con la clave de Admin ni con ningún RFC registrado en la tabla "employees".`);
-        }
-    } catch (error) {
-        console.error('Error crítico en el proceso de autenticación:', error);
-        alert('Error de comunicación con la base de datos en la nube.');
-    }
-}
-
-// =========================================================================
-// 2. FUNCIÓN DE PRUEBA ESTÁTICA (Ponla justo debajo de accessResponses)
-// =========================================================================
-function cargarYRenderizarBloquesEmpleados() {
-    hideAllSections();
-    
-    const container = document.getElementById('employees-cards-container');
-    if (!container) {
-        alert("ERROR CRÍTICO: No se encontró el contenedor 'employees-cards-container' en el HTML.");
-        return;
-    }
-    
-    // Forzamos la inyección del bloque de prueba
-    container.innerHTML = `
-        <div class="community-counter-box" style="background: rgba(255, 255, 255, 0.04); text-align: left; padding: 25px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;">
-                <h3 style="background: linear-gradient(to right, #6366f1, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; font-size: 1.4rem;">
-                    <i class="fa-solid fa-user-doctor"></i> BLOQUE DE PRUEBA VISUAL (DR. JAVIER LOPEZ)
-                </h3>
-                <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 50px;">
-                    RFC: ABCD123456XYZ
-                </span>
-            </div>
-            
-            <div class="counter-grid">
-                <div class="counter-item">
-                    <span class="counter-number count-tabaco-m">10</span>
-                    <span class="counter-label">Tabaquismo (Mes)</span>
-                </div>
-                <div class="counter-item">
-                    <span class="counter-number count-alcohol-m">25</span>
-                    <span class="counter-label">Alcoholismo (Mes)</span>
-                </div>
-                <div class="counter-item">
-                    <span class="counter-number count-adicciones-m">5</span>
-                    <span class="counter-label">Adicciones (Mes)</span>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // Activamos la visibilidad de la sección de respuestas
-    document.getElementById('responses-window').style.display = 'block';
-}
 
 
 
