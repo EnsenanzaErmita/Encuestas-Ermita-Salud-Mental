@@ -1822,44 +1822,59 @@ function renderMonthlySummaryTable(responses) {
 
 
 
+
 function renderStaffCounters(responses) {
     const contenedor = document.getElementById('contenedor-tarjetas-encuestadores');
-    if (!contenedor) {
-        console.error("Error: No se encontró el contenedor '#contenedor-tarjetas-encuestadores'");
-        return;
-    }
+    if (!contenedor) return;
 
     if (!responses || !Array.isArray(responses) || responses.length === 0) {
         contenedor.innerHTML = `<p style="color: #94a3b8; text-align: center; padding: 20px;">No hay encuestas registradas para contabilizar.</p>`;
         return;
     }
 
-    // 1. Agrupamos los totales por cada nombre de asistente
     const conteoPersonal = {};
 
     responses.forEach(r => {
         if (!r) return;
-        const nombreAsistente = r.assistant ? r.assistant.trim() : 'Personal No Especificado';
-        const categoria = r.keyCategory ? r.keyCategory.toLowerCase().trim() : '';
+        
+        // 1. Limpiamos el nombre del asistente
+        const nombreAsistente = r.assistant ? r.assistant.trim().toUpperCase() : 'PERSONAL NO ESPECIFICADO';
+        
+        // 2. Limpiamos la categoría quitándole espacios, convirtiendo a minúsculas y removiendo acentos
+        let categoria = r.keyCategory ? String(r.keyCategory).toLowerCase().trim() : '';
+        
+        // Removemos acentos por si acaso viene "tabaquísmo" o "adicción"
+        categoria = categoria.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
         if (!conteoPersonal[nombreAsistente]) {
             conteoPersonal[nombreAsistente] = { tabaquismo: 0, alcoholismo: 0, adicciones: 0, total: 0 };
         }
 
-        if (categoria === 'tabaquismo') conteoPersonal[nombreAsistente].tabaquismo++;
-        else if (categoria === 'alcoholismo') conteoPersonal[nombreAsistente].alcoholismo++;
-        else if (categoria === 'adicciones') conteoPersonal[nombreAsistente].adicciones++;
+        // 3. COMPARACIÓN FLEXIBLE: Busca si el texto contiene la palabra clave
+        if (categoria.includes('tabaco') || categoria.includes('tabaquismo')) {
+            conteoPersonal[nombreAsistente].tabaquismo++;
+        } else if (categoria.includes('alcohol') || categoria.includes('alcoholismo')) {
+            conteoPersonal[nombreAsistente].alcoholismo++;
+        } else if (categoria.includes('adiccion') || categoria.includes('adicciones')) {
+            conteoPersonal[nombreAsistente].adicciones++;
+        }
         
         conteoPersonal[nombreAsistente].total++;
     });
 
-    // 2. Construimos el HTML dinámico de las tarjetas
+    // 4. Si después de procesar todo, el objeto de conteo se quedó vacío por alguna razón extraña
+    if (Object.keys(conteoPersonal).length === 0) {
+        contenedor.innerHTML = `<p style="color: #94a3b8; text-align: center; padding: 20px;">Se recibieron datos, pero las categorías no coinciden con tabaquismo, alcoholismo o adicciones.</p>`;
+        return;
+    }
+
+    // 5. Construimos las tarjetas visuales
     let htmlFinal = '';
 
     Object.keys(conteoPersonal).forEach(nombre => {
         const datos = conteoPersonal[nombre];
         htmlFinal += `
-            <div style="background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 10px;">
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px;">
                 <h4 style="margin-top: 0; margin-bottom: 15px; color: #f8fafc; font-size: 1.1rem; border-left: 4px solid #38bdf8; padding-left: 10px; text-transform: uppercase;">
                     ${nombre} <span style="font-size: 0.9rem; color: #94a3b8; font-weight: normal;">(Total: ${datos.total})</span>
                 </h4>
@@ -1882,7 +1897,6 @@ function renderStaffCounters(responses) {
         `;
     });
 
-    // CORREGIDO: Asignación limpia al contenedor HTML sin variables fantasma
     contenedor.innerHTML = htmlFinal;
 }
 
