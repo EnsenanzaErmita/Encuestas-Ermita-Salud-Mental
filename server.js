@@ -203,6 +203,32 @@ app.get('/api/stats', (req, res) => {
     });
 });
 
+
+
+
+
+
+// RUTA API NUEVA: Obtener el historial completo de encuestas para el administrador
+app.get('/api/admin-surveys', (req, res) => {
+    // Trae todas las encuestas ordenadas de la más reciente a la más antigua
+    const sql = 'SELECT timestamp, keyCategory, diagnostic, assistant FROM survey_responses ORDER BY timestamp DESC';
+    
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error('Error al consultar historial de encuestas:', err);
+            return res.status(500).json({ message: 'Error interno al obtener los datos.' });
+        }
+        res.status(200).json(results);
+    });
+});
+
+
+
+
+
+
+
+
 // =========================================================================
 // 4. RUTA PARA SERVIR EL HTML (Abajo de la API)
 // =========================================================================

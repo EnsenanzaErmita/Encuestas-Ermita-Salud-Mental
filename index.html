@@ -631,7 +631,7 @@ table td:last-child {
 
     <!-- Cambia este número manualmente cada vez que vayas a actualizar Git -->
     <div style="font-size: 0.9em; color: #ff9800; font-weight: bold; margin-top: 5px;">
-        v4.0.0
+        v5.0.0
     </div>
         </header>
 
@@ -805,17 +805,6 @@ table td:last-child {
 
 
 
-<div class="dynamic-section" id="responses-window" style="display: none;">
-    <div class="section-header">
-        <h2><i class="fa-solid fa-database"></i> Panel de Administración</h2>
-        <button class="btn-back" onclick="goHome()"><i class="fa-solid fa-xmark"></i> Volver</button>
-    </div>
-    
-    <!-- Frase fija solicitada -->
-    <div style="text-align: center; padding: 40px; margin-top: 20px; background: rgba(168, 85, 247, 0.1); border: 2px dashed var(--accent-adicciones); border-radius: 8px;">
-        <h1 style="color: #4caf50; font-size: 2rem; margin: 0;">¡Por fin veo la información!</h1>
-    </div>
-</div>
 
 
 
@@ -1156,38 +1145,88 @@ async function saveMonthlyGoal(e) {
 
 // Asegúrate de que esta variable esté declarada arriba en tu código
 // Forzamos la declaración limpia de la función
+<script>
 function accessResponses() {
     const pass = prompt("Ingrese la contraseña de Administrador:");
     if (pass === ADMIN_PASSWORD) {
-        // 1. Apagamos todas las secciones usando la función nativa del sistema
         hideAllSections();
         
-        // 2. TRUCO DEFINITIVO: Usamos el contenedor de Admin (que ya sabemos que SÍ SE MUESTRA)
         const adminWindow = document.getElementById('admin-window');
-        
-        if (adminWindow) {
-            // 3. Reemplazamos temporalmente su contenido con tu frase fija
-            adminWindow.innerHTML = `
-                <div class="section-header">
-                    <h2><i class="fa-solid fa-database"></i> Panel de Administración</h2>
-                    <button class="btn-back" onclick="location.reload()"><i class="fa-solid fa-xmark"></i> Volver</button>
-                </div>
-                <div style="text-align: center; padding: 40px; margin-top: 20px; background: rgba(168, 85, 247, 0.1); border: 2px dashed #a855f7; border-radius: 8px;">
-                    <h1 style="color: #4caf50; font-size: 2rem; margin: 0; font-family: sans-serif;">¡Por fin veo la información!</h1>
-                </div>
-            `;
-            
-            // 4. Encendemos el panel que sabemos que el CSS sí respeta
-            adminWindow.style.display = 'block';
-        } else {
+        if (!adminWindow) {
             alert("Error: No se encontró el contenedor de administración.");
+            return;
         }
+
+        // Inyectamos la estructura limpia de la tabla de MySQL
+        adminWindow.innerHTML = `
+            <div class="section-header">
+                <h2><i class="fa-solid fa-database"></i> Detalle Individual de Encuestas</h2>
+                <button class="btn-back" onclick="location.reload()"><i class="fa-solid fa-xmark"></i> Volver</button>
+            </div>
+            <p style="color: var(--text-muted); margin-bottom: 15px; font-size: 0.95rem;">
+                Registro de resultados recolectados en C.M.F. Ermita.
+            </p>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha y Hora</th>
+                            <th>Encuesta</th>
+                            <th>Resultado/Nivel</th>
+                            <th>Persona que Elaboró / Asistió</th>
+                        </tr>
+                    </thead>
+                    <tbody id="responses-dinamicas-body">
+                        <tr><td colspan="4" style="text-align:center; padding:20px;">Cargando registros desde la base de datos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        adminWindow.style.display = 'block';
+
+        // Consultamos la base de datos en Clever Cloud
+        fetch('/api/admin-surveys')
+            .then(response => {
+                if (!response.ok) throw new Error('Error en el servidor');
+                return response.json();
+            })
+            .then(data => {
+                const tbody = document.getElementById('responses-dinamicas-body');
+                if (!tbody) return;
+                
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px;">No hay encuestas registradas todavía.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = ''; // Limpiamos el cargando
+
+                data.forEach(item => {
+                    const fechaFormateada = new Date(item.timestamp).toLocaleString('es-MX');
+                    const fila = document.createElement('tr');
+                    fila.innerHTML = `
+                        <td>${fechaFormateada}</td>
+                        <td style="text-transform: capitalize; font-weight: bold;">${item.keyCategory}</td>
+                        <td>${item.diagnostic}</td>
+                        <td>${item.assistant || 'No especificado'}</td>
+                    `;
+                    tbody.appendChild(fila);
+                });
+            })
+            .catch(error => {
+                console.error(error);
+                const tbody = document.getElementById('responses-dinamicas-body');
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red; padding:20px;">Error al conectar con la base de datos.</td></tr>`;
+                }
+            });
 
     } else if (pass !== null) {
         alert("Contraseña Incorrecta.");
     }
 }
-
 
 
 
@@ -1737,6 +1776,11 @@ function renderResponsesTable() {
         </tr>
     `).join('');
 }
+
+
+
+
+
 
 
 
