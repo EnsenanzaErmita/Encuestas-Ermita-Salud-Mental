@@ -243,6 +243,38 @@ app.get('/api/admin-surveys', (req, res) => {
 
 
 
+// RUTA API NUEVA: Validar si un RFC existe en la tabla de empleados
+app.post('/api/validate-rfc', (req, res) => {
+    const { rfc } = req.body;
+    
+    if (!rfc) {
+        return res.status(400).json({ valid: false, message: 'RFC no proporcionado.' });
+    }
+
+    // Buscamos de forma exacta el RFC en la tabla employees (convertido a mayúsculas)
+    const sql = 'SELECT rfc FROM employees WHERE UPPER(rfc) = ?';
+    db.query(sql, [rfc.toUpperCase().trim()], (err, results) => {
+        if (err) {
+            console.error('Error al validar RFC en la base de datos:', err);
+            return res.status(500).json({ valid: false, message: 'Error interno en el servidor.' });
+        }
+        
+        if (results.length > 0) {
+            // El RFC existe, acceso concedido
+            return res.status(200).json({ valid: true });
+        } else {
+            // El RFC no existe en el sistema
+            return res.status(200).json({ valid: false });
+        }
+    });
+});
+
+
+
+
+
+
+
 
 
 

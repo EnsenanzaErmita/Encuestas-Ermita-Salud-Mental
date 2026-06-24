@@ -631,7 +631,7 @@ table td:last-child {
 
     <!-- Cambia este número manualmente cada vez que vayas a actualizar Git -->
     <div style="font-size: 0.9em; color: #ff9800; font-weight: bold; margin-top: 5px;">
-        v11.0.0
+        v12.0.0
     </div>
         </header>
 
@@ -1163,87 +1163,116 @@ async function saveMonthlyGoal(e) {
 // Forzamos la declaración limpia de la función
 function accessResponses() {
     try {
-        const pass = prompt("Ingrese la contraseña de Administrador:");
-        if (pass === null) return; 
+        const input = prompt("Ingrese la contraseña de Administrador o su RFC autorizado:");
+        if (input === null) return; // Si cancela, se detiene pacíficamente
 
-        if (pass === ADMIN_PASSWORD) {
-            const menuCont = document.getElementById('menu-container');
-            if (menuCont) menuCont.style.display = 'none';
-            
-            const responsesWindow = document.getElementById('responses-window');
-            if (!responsesWindow) {
-                alert("Error técnico: El contenedor 'responses-window' no existe.");
-                return;
-            }
-            responsesWindow.style.display = 'block';
+        const valorIngresado = input.trim();
 
-            const contenedorClones = document.getElementById('contenedor-clones-empleados');
-            if (contenedorClones) {
-                contenedorClones.innerHTML = '<p style="text-align:center; padding: 20px;">Cargando métricas del personal...</p>';
-            }
-
-            fetch('/api/admin-surveys')
-                .then(response => {
-                    if (!response.ok) throw new Error('Error en el servidor');
-                    return response.json();
-                })
-                .then(data => {
-                    if (!contenedorClones) return;
-
-                    if (data.length === 0) {
-                        contenedorClones.innerHTML = `<p style="text-align:center; padding:20px;">No hay encuestas registradas en el mes actual todavía.</p>`;
-                        return;
-                    }
-
-                    contenedorClones.innerHTML = ''; 
-
-                    // Dibujamos un único contenedor agrupado por cada empleado
-                    data.forEach(item => {
-                        const bloqueClonado = document.createElement('div');
-                        bloqueClonado.className = 'community-counter-box';
-                        bloqueClonado.style.borderLeft = '5px solid var(--accent-admin, #a855f7)';
-                        bloqueClonado.style.padding = '20px';
-                        bloqueClonado.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                        
-                        // Vinculamos de forma exacta los nombres en minúsculas de la consulta SQL
-                        bloqueClonado.innerHTML = `
-                            <h3 style="margin-top:0; color: var(--accent-admin); font-size: 1.3rem; text-transform: uppercase;">
-                                <i class="fa-solid fa-user-doctor"></i> Personal: ${item.assistant}
-                            </h3>
-                            <div class="counter-grid" style="margin-top: 15px;">
-                                <div class="counter-item">
-                                    <span class="counter-number count-tabaco" style="font-size: 2rem;">${item.tabaco || 0}</span>
-                                    <span class="counter-label">Tabaquismo</span>
-                                </div>
-                                <div class="counter-item">
-                                    <span class="counter-number count-alcohol" style="font-size: 2rem;">${item.alcohol || 0}</span>
-                                    <span class="counter-label">Alcoholismo</span>
-                                </div>
-                                <div class="counter-item">
-                                    <span class="counter-number count-adicciones" style="font-size: 2rem;">${item.adicciones || 0}</span>
-                                    <span class="counter-label">Adicciones</span>
-                                </div>
-                            </div>
-                            <div style="margin-top: 15px; font-size: 0.9rem; text-align: right; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
-                                <strong>Total acumulado en el mes:</strong> ${item.total || 0} encuestas
-                            </div>
-                        `;
-                        contenedorClones.appendChild(bloqueClonado);
-                    });
-                })
-                .catch(error => {
-                    console.error(error);
-                    if (contenedorClones) {
-                        contenedorClones.innerHTML = `<p style="text-align:center; color:red; padding:20px;">Error al conectar con la base de datos.</p>`;
-                    }
-                });
-
+        // 1. PRIMERA VALIDACIÓN: ¿Es la contraseña del Administrador?
+        if (valorIngresado === ADMIN_PASSWORD) {
+            // Acceso concedido como administrador -> Ejecuta la carga del panel
+            cargarPanelRespuestas();
         } else {
-            alert("Contraseña Incorrecta.");
+            // 2. SEGUNDA VALIDACIÓN: Consultar al servidor si es un RFC válido de empleado
+            fetch('/api/validate-rfc', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rfc: valorIngresado })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Error en la comunicación con el servidor.');
+                return response.json();
+            })
+            .then(data => {
+                if (data.valid) {
+                    // Acceso concedido como empleado autorizado -> Ejecuta la carga del panel
+                    cargarPanelRespuestas();
+                } else {
+                    // Si no fue contraseña ni tampoco un RFC válido
+                    alert("Acceso denegado: Credencial o RFC no registrado en el sistema.");
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                alert("Error al verificar las credenciales de acceso.");
+            });
         }
     } catch (err) {
-        alert("Error al procesar la clonación: " + err.message);
+        alert("Error en el sistema de autenticación: " + err.message);
     }
+}
+
+// Sub-función aislada que se encarga de pintar la información para evitar repetir código
+function cargarPanelRespuestas() {
+    const menuCont = document.getElementById('menu-container');
+    if (menuCont) menuCont.style.display = 'none';
+    
+    const responsesWindow = document.getElementById('responses-window');
+    if (!responsesWindow) {
+        alert("Error técnico: El contenedor 'responses-window' no existe.");
+        return;
+    }
+    responsesWindow.style.display = 'block';
+
+    const contenedorClones = document.getElementById('contenedor-clones-empleados');
+    if (contenedorClones) {
+        contenedorClones.innerHTML = '<p style="text-align:center; padding: 20px;">Cargando métricas del personal...</p>';
+    }
+
+    // Petición a la API que ya funciona para traer los datos agrupados de MySQL
+    fetch('/api/admin-surveys')
+        .then(response => {
+            if (!response.ok) throw new Error('Error en el servidor');
+            return response.json();
+        })
+        .then(data => {
+            if (!contenedorClones) return;
+
+            if (data.length === 0) {
+                contenedorClones.innerHTML = `<p style="text-align:center; padding:20px;">No hay encuestas registradas en el mes actual todavía.</p>`;
+                return;
+            }
+
+            contenedorClones.innerHTML = ''; 
+
+            data.forEach(item => {
+                const bloqueClonado = document.createElement('div');
+                bloqueClonado.className = 'community-counter-box';
+                bloqueClonado.style.borderLeft = '5px solid var(--accent-admin, #a855f7)';
+                bloqueClonado.style.padding = '20px';
+                bloqueClonado.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                
+                bloqueClonado.innerHTML = `
+                    <h3 style="margin-top:0; color: var(--accent-admin); font-size: 1.3rem; text-transform: uppercase;">
+                        <i class="fa-solid fa-user-doctor"></i> Personal: ${item.assistant}
+                    </h3>
+                    <div class="counter-grid" style="margin-top: 15px;">
+                        <div class="counter-item">
+                            <span class="counter-number count-tabaco" style="font-size: 2rem;">${item.tabaco || 0}</span>
+                            <span class="counter-label">Tabaquismo</span>
+                        </div>
+                        <div class="counter-item">
+                            <span class="counter-number count-alcohol" style="font-size: 2rem;">${item.alcohol || 0}</span>
+                            <span class="counter-label">Alcoholismo</span>
+                        </div>
+                        <div class="counter-item">
+                            <span class="counter-number count-adicciones" style="font-size: 2rem;">${item.adicciones || 0}</span>
+                            <span class="counter-label">Adicciones</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; font-size: 0.9rem; text-align: right; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                        <strong>Total acumulado en el mes:</strong> ${item.total || 0} encuestas
+                    </div>
+                `;
+                contenedorClones.appendChild(bloqueClonado);
+            });
+        })
+        .catch(error => {
+            console.error(error);
+            if (contenedorClones) {
+                contenedorClones.innerHTML = `<p style="text-align:center; color:red; padding:20px;">Error al conectar con la base de datos.</p>`;
+            }
+        });
 }
 
 
