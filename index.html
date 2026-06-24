@@ -964,79 +964,25 @@ async function accessResponses() {
 // =========================================================================
 // 3. NUEVA FUNCIONALIDAD: FILTRAR MES ACTUAL Y REPETIR TARJETAS DEL MENÚ
 // =========================================================================
-async function cargarYRenderizarBloquesEmpleados() {
-    hideAllSections();
-    
-    const container = document.getElementById('employees-cards-container');
-    if (!container) return;
-    
-    container.innerHTML = '<p class="empty-message">Consultando registros del mes actual en MySQL...</p>';
+function cargarYRenderizarBloquesEmpleados() {
+    hideAllSections(); // Oculta el menú principal
 
-    try {
-        const resEmployees = await fetch(`${BASE_URL}/api/doctors`);
-        const resSurveys = await fetch(`${BASE_URL}/api/surveys/current-month`);
+    const originalHTML = document.getElementById('community-panel-month').innerHTML; // Captura tu bloque del mes
+    const container = document.getElementById('employees-cards-container'); // Busca el contenedor de respuestas
 
-        if (!resEmployees.ok || !resSurveys.ok) throw new Error('Fallo al consultar la API de Render.');
+    // Inyecta el mismo bloque exacto, quitando los IDs duplicados para que no choquen
+    container.innerHTML = originalHTML.replace(/id="[^"]*"/g, ""); 
 
-        const employees = await resEmployees.json();
-        const surveys = await resSurveys.json();
-
-        if (employees.length === 0) {
-            container.innerHTML = '<p class="empty-message">No existen médicos guardados en la tabla employees.</p>';
-            document.getElementById('responses-window').style.display = 'block';
-            return;
-        }
-
-        calculateResponsesSemaphore();
-        container.innerHTML = ''; 
-
-        employees.forEach(emp => {
-            const empSurveys = surveys.filter(s => 
-                s.assistant && (s.assistant.toUpperCase().includes(emp.rfc.toUpperCase()) || s.assistant.toUpperCase().includes(emp.name.toUpperCase()))
-            );
-
-            const tabaquismoCount = empSurveys.filter(s => s.keyCategory === 'tabaquismo').length;
-            const alcoholismoCount = empSurveys.filter(s => s.keyCategory === 'alcoholismo').length;
-            const adiccionesCount = empSurveys.filter(s => s.keyCategory === 'adicciones').length;
-
-            const bloqueClonadoHtml = `
-                <div class="community-counter-box" style="background: rgba(255, 255, 255, 0.04); text-align: left; padding: 25px; margin-top: 10px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;">
-                        <h3 style="background: linear-gradient(to right, #6366f1, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; font-size: 1.4rem; font-weight: 600;">
-                            <i class="fa-solid fa-user-doctor"></i> ${emp.name}
-                        </h3>
-                        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 50px;">
-                            RFC: ${emp.rfc}
-                        </span>
-                    </div>
-                    
-                    <div class="counter-grid">
-                        <div class="counter-item">
-                            <span class="counter-number count-tabaco-m">${tabaquismoCount}</span>
-                            <span class="counter-label">Tabaquismo (Mes)</span>
-                        </div>
-                        <div class="counter-item">
-                            <span class="counter-number count-alcohol-m">${alcoholismoCount}</span>
-                            <span class="counter-label">Alcoholismo (Mes)</span>
-                        </div>
-                        <div class="counter-item">
-                            <span class="counter-number count-adicciones-m">${adiccionesCount}</span>
-                            <span class="counter-label">Adicciones (Mes)</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-            container.innerHTML += bloqueClonadoHtml;
-        });
-
-        document.getElementById('responses-window').style.display = 'block';
-
-    } catch (error) {
-        console.error('Error al inyectar bloques:', error);
-        container.innerHTML = '<p class="empty-message" style="color: var(--accent-alcohol);">Error al estructurar los bloques dinámicos.</p>';
-        document.getElementById('responses-window').style.display = 'block';
-    }
+    document.getElementById('responses-window').style.display = 'block'; // Muestra la ventana en pantalla
 }
+
+
+
+
+
+
+
+
 
 
 
