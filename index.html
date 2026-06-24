@@ -1745,94 +1745,48 @@ async function accessResponses() {
 
 
 
-// 2. Leer la base de datos, filtrar el mes actual y clonar los bloques visuales
-async function cargarYRenderizarBloquesEmpleados() {
+
+// FUNCIÓN EN MODO PRUEBA ESTÁTICA PARA DESCARTAR ERRORES VISUALES
+function cargarYRenderizarBloquesEmpleados() {
     hideAllSections();
-    const container = document.getElementById('employees-cards-container');
-    if (!container) return;
     
-    container.innerHTML = '<p class="empty-message">Cargando datos desde la nube...</p>';
-
-    try {
-        // Petición 1: Obtener todos los empleados registrados
-        const resEmployees = await fetch(`${BASE_URL}/api/doctors`);
-        // Petición 2: Obtener las encuestas del mes actual
-        const resSurveys = await fetch(`${BASE_URL}/api/surveys/current-month`);
-
-        if (!resEmployees.ok || !resSurveys.ok) throw new Error('Error al conectar con la API.');
-
-        const employees = await resEmployees.json();
-        const surveys = await resSurveys.json();
-
-        // Si no hay empleados registrados en el sistema
-        if (employees.length === 0) {
-            container.innerHTML = '<p class="empty-message">No hay empleados registrados en la tabla employees.</p>';
-            document.getElementById('responses-window').style.display = 'block';
-            return;
-        }
-
-        // Actualizamos el semáforo superior con los datos de este mes
-        if (typeof calculateResponsesSemaphore === 'function') {
-            calculateResponsesSemaphore();
-        }
-
-        // Limpiamos el contenedor para empezar la clonación masiva
-        container.innerHTML = '';
-
-        // Iteramos por cada empleado encontrado en la tabla employees
-        employees.forEach(emp => {
-            // Filtramos las encuestas del mes actual donde el campo assistant coincida con este empleado
-            // Evaluamos tanto por su nombre completo como por su RFC por si acaso
-            const empSurveys = surveys.filter(s => 
-                s.assistant.includes(emp.name) || s.assistant.includes(emp.rfc)
-            );
-
-            // Contamos cuántas encuestas tiene de cada categoría en el mes
-            const tabaquismoCount = empSurveys.filter(s => s.keyCategory === 'tabaquismo').length;
-            const alcoholismoCount = empSurveys.filter(s => s.keyCategory === 'alcoholismo').length;
-            const adiccionesCount = empSurveys.filter(s => s.keyCategory === 'adicciones').length;
-
-            // Clonamos la estructura visual del menú de contadores principales en un bloque exclusivo para él
-            const employeeBlockHtml = `
-                <div class="community-counter-box" style="background: rgba(255, 255, 255, 0.04); text-align: left; padding: 25px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;">
-                        <h3 style="background: linear-gradient(to right, #6366f1, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; font-size: 1.4rem;">
-                            <i class="fa-solid fa-user-doctor"></i> ${emp.name}
-                        </h3>
-                        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 50px;">
-                            ID/RFC: ${emp.rfc}
-                        </span>
-                    </div>
-                    
-                    <div class="counter-grid">
-                        <div class="counter-item">
-                            <span class="counter-number count-tabaco-m">${tabaquismoCount}</span>
-                            <span class="counter-label">Tabaquismo</span>
-                        </div>
-                        <div class="counter-item">
-                            <span class="counter-number count-alcohol-m">${alcoholismoCount}</span>
-                            <span class="counter-label">Alcoholismo</span>
-                        </div>
-                        <div class="counter-item">
-                            <span class="counter-number count-adicciones-m">${adiccionesCount}</span>
-                            <span class="counter-label">Adicciones</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Inyectamos el bloque clonado del empleado al contenedor de la vista
-            container.innerHTML += employeeBlockHtml;
-        });
-
-        // Mostramos la ventana de respuestas en la interfaz
-        document.getElementById('responses-window').style.display = 'block';
-
-    } catch (error) {
-        console.error('Error al generar los bloques dinámicos:', error);
-        container.innerHTML = '<p class="empty-message" style="color: var(--accent-alcohol);">Error al enlazar los datos de la nube.</p>';
-        document.getElementById('responses-window').style.display = 'block';
+    const container = document.getElementById('employees-cards-container');
+    if (!container) {
+        alert("ERROR CRÍTICO: No se encontró el contenedor 'employees-cards-container' en el HTML.");
+        return;
     }
+    
+    // Forzamos la inyección de un bloque idéntico al menú principal con datos de prueba
+    container.innerHTML = `
+        <div class="community-counter-box" style="background: rgba(255, 255, 255, 0.04); text-align: left; padding: 25px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;">
+                <h3 style="background: linear-gradient(to right, #6366f1, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; font-size: 1.4rem;">
+                    <i class="fa-solid fa-user-doctor"></i> BLOQUE DE PRUEBA VISUAL (DR. JAVIER LOPEZ)
+                </h3>
+                <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 50px;">
+                    RFC: ABCD123456XYZ
+                </span>
+            </div>
+            
+            <div class="counter-grid">
+                <div class="counter-item">
+                    <span class="counter-number count-tabaco-m">10</span>
+                    <span class="counter-label">Tabaquismo (Mes)</span>
+                </div>
+                <div class="counter-item">
+                    <span class="counter-number count-alcohol-m">25</span>
+                    <span class="counter-label">Alcoholismo (Mes)</span>
+                </div>
+                <div class="counter-item">
+                    <span class="counter-number count-adicciones-m">5</span>
+                    <span class="counter-label">Adicciones (Mes)</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Activamos la visibilidad de la sección de respuestas
+    document.getElementById('responses-window').style.display = 'block';
 }
 
 
