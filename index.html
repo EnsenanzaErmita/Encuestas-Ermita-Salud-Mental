@@ -928,55 +928,65 @@ document.addEventListener('DOMContentLoaded', updateAllCounters);
 // =========================================================================
 // 2. MÓDULO DE AUTENTICACIÓN (UNIFICADO - VALIDA ADMIN Y EMPLOYEES)
 // =========================================================================
+
+// =========================================================================
+// CONTROL DE ACCESO DIRECTO CON CONTROL DE VERSIÓN TEMPORAL
+// =========================================================================
 async function accessResponses() {
     const pass = prompt("Ingrese su contraseña (RFC autorizado o clave de Administrador):");
     if (pass === null) return; 
 
     const contraseñaLimpia = pass.trim().toUpperCase();
 
+    // 1. Validación Admin
     if (contraseñaLimpia === "VIPERMÍSTICO" || contraseñaLimpia === ADMIN_PASSWORD.toUpperCase()) {
-        alert("¡Acceso exitoso como Administrador!");
         cargarYRenderizarBloquesEmpleados();
         return;
     }
 
+    // 2. Validación RFC directa contra MySQL
     try {
         const response = await fetch(`${BASE_URL}/api/doctors`);
-        if (!response.ok) throw new Error('El servidor de Render no respondió.');
+        if (!response.ok) throw new Error('Error de servidor.');
         
         const employees = await response.json();
-        const listaRfcBaseDatos = employees.map(emp => emp.rfc ? emp.rfc.trim().toUpperCase() : 'SIN_RFC');
-        const isAuthorized = listaRfcBaseDatos.includes(contraseñaLimpia);
+        const listaRfc = employees.map(emp => emp.rfc ? emp.rfc.trim().toUpperCase() : 'SIN_RFC');
 
-        if (isAuthorized) {
-            alert(`¡RFC Autorizado con éxito! Cargando monitoreo del personal...`);
+        if (listaRfc.includes(contraseñaLimpia)) {
+            // 🚨 CAMBIA ESTE NÚMERO DE VERSIÓN CADA VEZ QUE SUBAS UN CAMBIO A GITHUB 🚨
+            const VERSIÓN_ACTUAL = "v1.1"; 
+            
+            alert(`[VERIFICACIÓN] Código ejecutado con éxito en su versión: ${VERSIÓN_ACTUAL}\n\nRFC Autorizado. Cargando módulo...`);
             cargarYRenderizarBloquesEmpleados();
         } else {
-            alert(`ACCESO NEGADO POR RFC.\n\nEl RFC "${contraseñaLimpia}" no está registrado en la tabla "employees" de Clever Cloud.\n\nLista de personal autorizado:\n[ ${listaRfcBaseDatos.join(", ")} ]`);
+            alert("Acceso denegado. RFC no registrado.");
         }
     } catch (error) {
-        console.error('Error de autenticación:', error);
-        alert('Error de comunicación con la nube. Entrando en modo contingencia visual por seguridad...');
+        console.error(error);
+        // Contingencia visual en caso de que falle la red
         cargarYRenderizarBloquesEmpleados();
     }
 }
 
-// =========================================================================
-// 3. NUEVA FUNCIONALIDAD: FILTRAR MES ACTUAL Y REPETIR TARJETAS DEL MENÚ
-// =========================================================================
 function cargarYRenderizarBloquesEmpleados() {
-    hideAllSections(); // Oculta el menú principal
+    const bloqueMesOriginal = document.getElementById('community-panel-month');
+    const contenedorDestino = document.getElementById('employees-cards-container');
+    const ventanaRespuestas = document.getElementById('responses-window');
 
-    const originalHTML = document.getElementById('community-panel-month').innerHTML; // Captura tu bloque del mes
-    const container = document.getElementById('employees-cards-container'); // Busca el contenedor de respuestas
+    if (!bloqueMesOriginal || !contenedorDestino || !ventanaRespuestas) {
+        alert("Atención: Uno de los contenedores HTML no existe en el archivo.");
+        return;
+    }
 
-    // Inyecta el mismo bloque exacto, quitando los IDs duplicados para que no choquen
-    container.innerHTML = originalHTML.replace(/id="[^"]*"/g, ""); 
+    // Copiamos la tarjeta viva del menú principal
+    contenedorDestino.innerHTML = bloqueMesOriginal.innerHTML;
 
-    document.getElementById('responses-window').style.display = 'block'; // Muestra la ventana en pantalla
+    // Forzamos visibilidad de la sección de respuestas
+    ventanaRespuestas.style.display = 'block';
+
+    // Desplazamos la pantalla automáticamente hacia abajo para ver el resultado
+    ventanaRespuestas.scrollIntoView({ behavior: 'smooth' });
 }
-
-
 
 
 
