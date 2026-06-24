@@ -631,7 +631,7 @@ table td:last-child {
 
     <!-- Cambia este número manualmente cada vez que vayas a actualizar Git -->
     <div style="font-size: 0.9em; color: #ff9800; font-weight: bold; margin-top: 5px;">
-        v8.0.0
+        v10.0.0
     </div>
         </header>
 
@@ -804,6 +804,22 @@ table td:last-child {
 
 
 
+<!-- SECCIÓN DE RESPUESTAS SEPARADA (Arriba de tus scripts) -->
+<div class="dynamic-section" id="responses-window" style="display: none;">
+    <div class="section-header">
+        <h2><i class="fa-solid fa-users-viewfinder"></i> Rendimiento Mensual por Personal</h2>
+        <button class="btn-back" onclick="goHome()"><i class="fa-solid fa-xmark"></i> Volver</button>
+    </div>
+    <p style="color: var(--text-muted); margin-bottom: 25px; font-size: 0.95rem;">
+        Monitoreo de encuestas recolectadas en el mes en curso agrupadas por empleado.
+    </p>
+    
+    <!-- Aquí es donde la función de JavaScript inyectará exclusivamente los bloques clonados -->
+    <div id="contenedor-clones-empleados" style="display: flex; flex-direction: column; gap: 30px;">
+        <!-- El estado de carga inicial -->
+        <p style="text-align:center; padding: 20px;">Cargando métricas del personal...</p>
+    </div>
+</div>
 
 
 
@@ -1146,34 +1162,94 @@ async function saveMonthlyGoal(e) {
 // Asegúrate de que esta variable esté declarada arriba en tu código
 // Forzamos la declaración limpia de la función
 function accessResponses() {
-    const pass = prompt("Ingrese la contraseña de Administrador:");
-    if (pass === null) return; // Si cancela, se detiene pacíficamente
+    try {
+        const pass = prompt("Ingrese la contraseña de Administrador:");
+        if (pass === null) return; // Si cancela, se detiene pacíficamente
 
-    // Usa tu constante ADMIN_PASSWORD que ya existe arriba en tu código
-    if (pass === ADMIN_PASSWORD) {
-        // Ocultamos el contenedor principal
-        const menuCont = document.getElementById('menu-container');
-        if (menuCont) menuCont.style.display = 'none';
-        
-        // Mostramos la frase fija en el contenedor validado por tu CSS
-        const adminWindow = document.getElementById('admin-window');
-        if (adminWindow) {
-            adminWindow.innerHTML = `
-                <div class="section-header">
-                    <h2><i class="fa-solid fa-database"></i> Panel de Administración</h2>
-                    <button class="btn-back" onclick="location.reload()"><i class="fa-solid fa-xmark"></i> Volver</button>
-                </div>
-                <div style="text-align: center; padding: 40px; margin-top: 20px; background: rgba(168, 85, 247, 0.1); border: 2px dashed #a855f7; border-radius: 8px;">
-                    <h1 style="color: #4caf50; font-size: 2rem; margin: 0; font-family: sans-serif;">¡Por fin veo la información!</h1>
-                </div>
-            `;
-            adminWindow.style.display = 'block';
+        // Usa tu constante ADMIN_PASSWORD que ya tienes declarada arriba
+        if (pass === ADMIN_PASSWORD) {
+            
+            // 1. Ocultamos el menú principal
+            const menuCont = document.getElementById('menu-container');
+            if (menuCont) menuCont.style.display = 'none';
+            
+            // 2. Mandamos a llamar y encendemos la sección HTML de arriba
+            const responsesWindow = document.getElementById('responses-window');
+            if (!responsesWindow) {
+                alert("Error técnico: El contenedor 'responses-window' no existe en el HTML.");
+                return;
+            }
+            responsesWindow.style.display = 'block';
+
+            // Restablecemos el mensaje de cargando dentro del contenedor de clones
+            const contenedorClones = document.getElementById('contenedor-clones-empleados');
+            if (contenedorClones) {
+                contenedorClones.innerHTML = '<p style="text-align:center; padding: 20px;">Cargando métricas del personal...</p>';
+            }
+
+            // 3. Hacemos la petición a la API simplificada de tu server.js
+            fetch('/api/admin-surveys')
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en el servidor');
+                    return response.json();
+                })
+                .then(data => {
+                    if (!contenedorClones) return;
+
+                    if (data.length === 0) {
+                        contenedorClones.innerHTML = `<p style="text-align:center; padding:20px;">No hay encuestas registradas en el mes actual todavía.</p>`;
+                        return;
+                    }
+
+                    contenedorClones.innerHTML = ''; // Limpiamos el mensaje de "Cargando..."
+
+                    // 4. Clonamos y dibujamos dinámicamente un bloque por cada empleado encontrado
+                    data.forEach(item => {
+                        const bloqueClonado = document.createElement('div');
+                        bloqueClonado.className = 'community-counter-box';
+                        bloqueClonado.style.borderLeft = '5px solid var(--accent-admin, #a855f7)';
+                        bloqueClonado.style.padding = '20px';
+                        bloqueClonado.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                        
+                        bloqueClonado.innerHTML = `
+                            <h3 style="margin-top:0; color: var(--accent-admin); font-size: 1.3rem;">
+                                <i class="fa-solid fa-user-doctor"></i> Personal: ${item.assistant}
+                            </h3>
+                            <div class="counter-grid" style="margin-top: 15px;">
+                                <div class="counter-item">
+                                    <span class="counter-number count-tabaco" style="font-size: 2rem;">${item.countTabaco}</span>
+                                    <span class="counter-label">Tabaquismo</span>
+                                </div>
+                                <div class="counter-item">
+                                    <span class="counter-number count-alcohol" style="font-size: 2rem;">${item.countAlcohol}</span>
+                                    <span class="counter-label">Alcoholismo</span>
+                                </div>
+                                <div class="counter-item">
+                                    <span class="counter-number count-adicciones" style="font-size: 2rem;">${item.countAdicciones}</span>
+                                    <span class="counter-label">Adicciones</span>
+                                </div>
+                            </div>
+                            <div style="margin-top: 15px; font-size: 0.9rem; text-align: right; color: var(--text-muted);">
+                                <strong>Total recolectado en el mes:</strong> ${item.totalEmpleado} encuestas
+                            </div>
+                        `;
+                        contenedorClones.appendChild(bloqueClonado);
+                    });
+                })
+                .catch(error => {
+                    console.error(error);
+                    if (contenedorClones) {
+                        contenedorClones.innerHTML = `<p style="text-align:center; color:red; padding:20px;">Error al conectar con la base de datos.</p>`;
+                    }
+                });
+
+        } else {
+            alert("Contraseña Incorrecta.");
         }
-    } else {
-        alert("Contraseña Incorrecta.");
+    } catch (err) {
+        alert("Error al procesar la clonación: " + err.message);
     }
 }
-
 
 
 
