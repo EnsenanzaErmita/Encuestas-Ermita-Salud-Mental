@@ -797,48 +797,24 @@ table td:last-child {
 
 
 
-<!-- CONTENEDOR SIMPLIFICADO: Sin clases dinámicas ocultas por defecto -->
+
+
 <div id="responses-window" style="display: none; width: 100%; margin-top: 20px;">
     
-    <!-- Encabezado básico -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2>Panel de Historial de Encuestas</h2>
-        <button onclick="goHome()" style="padding: 8px 16px; cursor: pointer;">Volver</button>
+    <!-- Encabezado y botón Volver -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <h2><i class="fa-solid fa-users" style="color: var(--accent-info)"></i> Productividad de Encuestadores</h2>
+        <button onclick="goHome()" style="padding: 10px 20px; cursor: pointer; border-radius: 8px; font-weight: bold;">Volver</button>
     </div>
 
-    <!-- 1. TABLA RESUMEN MENSUAL -->
-    <div style="margin-bottom: 30px; background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155;">
-        <h3>Resumen Mensual</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; color: #f8fafc;">
-            <thead>
-                <tr style="text-align: left; border-bottom: 2px solid #475569;">
-                    <th style="padding: 10px;">Periodo (Mes / Año)</th>
-                    <th style="padding: 10px;">Tabaquismo</th>
-                    <th style="padding: 10px;">Alcoholismo</th>
-                    <th style="padding: 10px;">Adicciones</th>
-                    <th style="padding: 10px; text-align: center;">Total Mensual</th>
-                </tr>
-            </thead>
-            <!-- El JS inyectará las filas directamente aquí -->
-            <tbody id="monthly-summary-table-body"></tbody>
-        </table>
-    </div>
-
-    <!-- 2. TABLA DETALLE INDIVIDUAL -->
-    <div style="background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155;">
-        <h3>Detalle Individual de Encuestas</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; color: #f8fafc;">
-            <thead>
-                <tr style="text-align: left; border-bottom: 2px solid #475569;">
-                    <th style="padding: 10px;">Fecha y Hora</th>
-                    <th style="padding: 10px;">Encuesta</th>
-                    <th style="padding: 10px;">Resultado/Nivel</th>
-                    <th style="padding: 10px;">Persona que Asistió</th>
-                </tr>
-            </thead>
-            <!-- El JS inyectará las filas directamente aquí -->
-            <tbody id="responses-table-body"></tbody>
-        </table>
+    <!-- Contenedor dinámico donde se generarán las tarjetas de cada persona -->
+    <div class="community-counter-box" id="encuestadores-panel-global" style="background: rgba(30, 41, 59, 0.7); padding: 30px; border-radius: 24px; border: 1px solid var(--card-border); backdrop-filter: blur(20px);">
+        <h3 style="margin-bottom: 20px; color: #f8fafc; font-size: 1.25rem;">Total de Encuestas Realizadas por Personal</h3>
+        
+        <!-- Aquí se inyectarán automáticamente los contadores de cada encuestador -->
+        <div id="contenedor-tarjetas-encuestadores" style="display: flex; flex-direction: column; gap: 20px;">
+            <p style="color: var(--text-muted);">Cargando estadísticas del personal...</p>
+        </div>
     </div>
 
 </div>
@@ -1197,12 +1173,13 @@ function calculateResponsesSemaphore(responsesFromServer) {
 
 
 
+
 async function accessResponses() {
     const pass = prompt("Ingrese su contraseña (RFC autorizado o clave de Administrador):");
     if (pass === null || pass.trim() === "") return;
 
     try {
-        const response = await fetch('https://encuestas-ermita-salud-mental.onrender.com/api/validar-acceso', {
+        const response = await fetch('https://onrender.com', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ clave: pass.trim() })
@@ -1210,50 +1187,28 @@ async function accessResponses() {
         
         if (response.ok) {
             const resultado = await response.json();
-            const datosEncuestas = resultado.surveys; 
+            const datosEncuestas = resultado.surveys; // Arreglo que contiene los registros de Clever Cloud
 
-            // PASO 1: Ocultamos todas las secciones del menú de inicio
+            // Ocultamos el menú principal
             hideAllSections();
             
-            // PASO 2: Intentamos pintar la Tabla Individual (Protegida)
-            try {
-                renderResponsesTable(datosEncuestas);
-            } catch (errTable) {
-                console.error("Error en renderResponsesTable:", errTable);
-            }
-
-            // PASO 3: Intentamos pintar la Tabla Mensual (Protegida)
-            try {
-                renderMonthlySummaryTable(datosEncuestas); 
-            } catch (errMonthly) {
-                console.error("Error en renderMonthlySummaryTable:", errMonthly);
-            }
-
-            // PASO 4: Intentamos calcular el Semáforo (Protegida)
-            try {
-                calculateResponsesSemaphore(datosEncuestas); 
-            } catch (errSemaforo) {
-                console.error("Error en calculateResponsesSemaphore:", errSemaforo);
-            }
+            // LLAMADA SIMPLIFICADA: Pintamos las tarjetas con los contadores por nombre
+            renderStaffCounters(datosEncuestas);
             
-            // PASO 5: OBLIGATORIO Y FORZADO - Encendemos la interfaz visual
+            // Forzamos el encendido visual de la ventana
+            const ventana = document.getElementById('responses-window');
+            if (ventana) {
+                ventana.style.setProperty('display', 'block', 'important');
+            }
             if (document.getElementById('main-header')) {
                 document.getElementById('main-header').style.display = 'block';
-            }
-            
-            const ventanaRespuestas = document.getElementById('responses-window');
-            if (ventanaRespuestas) {
-                ventanaRespuestas.style.setProperty('display', 'block', 'important');
-                ventanaRespuestas.classList.remove('hidden');
-                ventanaRespuestas.classList.add('active');
             }
             
         } else {
             alert("Acceso denegado. No es un Administrador o RFC Autorizado.");
         }
-
     } catch (error) {
-        console.error('Error general de acceso:', error);
+        console.error('Error:', error);
         alert("Ocurrió un error al conectar con el servidor.");
     }
 }
@@ -1852,6 +1807,82 @@ function renderMonthlySummaryTable(responses) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function renderStaffCounters(responses) {
+    const contenedor = document.getElementById('contenedor-tarjetas-encuestadores');
+    if (!contenedor) return;
+
+    if (!responses || !Array.isArray(responses) || responses.length === 0) {
+        contenedor.innerHTML = `<p style="color: #94a3b8; text-align: center; padding: 20px;">No hay encuestas registradas para contabilizar.</p>`;
+        return;
+    }
+
+    // 1. Agrupamos los totales por cada nombre de asistente
+    const conteoPersonal = {};
+
+    responses.forEach(r => {
+        if (!r) return;
+        // Tomamos el nombre del asistente (si viene vacío usamos 'No especificado')
+        const nombreAsistente = r.assistant ? r.assistant.trim() : 'Personal No Especificado';
+        const categoria = r.keyCategory ? r.keyCategory.toLowerCase().trim() : '';
+
+        // Si es la primera vez que vemos a esta persona, le creamos sus contadores en 0
+        if (!conteoPersonal[nombreAsistente]) {
+            conteoPersonal[nombreAsistente] = { tabaquismo: 0, alcoholismo: 0, adicciones: 0, total: 0 };
+        }
+
+        // Sumamos al contador correspondiente
+        if (categoria === 'tabaquismo') conteoPersonal[nombreAsistente].tabaquismo++;
+        else if (categoria === 'alcoholismo') conteoPersonal[nombreAsistente].alcoholismo++;
+        else if (categoria === 'adicciones') conteoPersonal[nombreAsistente].adicciones++;
+        
+        conteoPersonal[nombreAsistente].total++;
+    });
+
+    // 2. Construimos el HTML dinámico con el mismo estilo de rejilla (Grid) que propusiste
+    let htmlFinal = '';
+
+    Object.keys(conteoPersonal).forEach(nombre => {
+        const datos = conteoPersonal[nombre];
+        htmlFinal += `
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                <h4 style="margin-top: 0; margin-bottom: 15px; color: #f8fafc; font-size: 1.1rem; border-left: 4px solid var(--accent-info, #38bdf8); padding-left: 10px;">
+                    ${nombre} <span style="font-size: 0.9rem; color: #94a3b8; font-weight: normal;">(Total: ${datos.total})</span>
+                </h4>
+                
+                <div class="counter-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center;">
+                    <div class="counter-item" style="background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 10px;">
+                        <span class="counter-number count-tabaco" style="display: block; font-size: 1.5rem; font-weight: bold; color: var(--accent-tabaco, #ef4444);">${datos.tabaquismo}</span>
+                        <span class="counter-label" style="font-size: 0.85rem; color: #94a3b8;">Tabaquismo</span>
+                    </div>
+                    <div class="counter-item" style="background: rgba(245, 158, 11, 0.1); padding: 10px; border-radius: 10px;">
+                        <span class="counter-number count-alcohol" style="display: block; font-size: 1.5rem; font-weight: bold; color: var(--accent-alcohol, #f59e0b);">${datos.alcoholismo}</span>
+                        <span class="counter-label" style="font-size: 0.85rem; color: #94a3b8;">Alcoholismo</span>
+                    </div>
+                    <div class="counter-item" style="background: rgba(168, 85, 247, 0.1); padding: 10px; border-radius: 10px;">
+                        <span class="counter-number count-adicciones" style="display: block; font-size: 1.5rem; font-weight: bold; color: var(--accent-adicciones, #a855f7);">${datos.adicciones}</span>
+                        <span class="counter-label" style="font-size: 0.85rem; color: #94a3b8;">Adicciones</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    contenedor.innerHTML = htmlFinal;
+}
 
 
 
