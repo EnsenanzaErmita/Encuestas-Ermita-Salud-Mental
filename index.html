@@ -631,7 +631,7 @@ table td:last-child {
 
     <!-- Cambia este número manualmente cada vez que vayas a actualizar Git -->
     <div style="font-size: 0.9em; color: #ff9800; font-weight: bold; margin-top: 5px;">
-        v10.0.0
+        v11.0.0
     </div>
         </header>
 
@@ -1164,30 +1164,24 @@ async function saveMonthlyGoal(e) {
 function accessResponses() {
     try {
         const pass = prompt("Ingrese la contraseña de Administrador:");
-        if (pass === null) return; // Si cancela, se detiene pacíficamente
+        if (pass === null) return; 
 
-        // Usa tu constante ADMIN_PASSWORD que ya tienes declarada arriba
         if (pass === ADMIN_PASSWORD) {
-            
-            // 1. Ocultamos el menú principal
             const menuCont = document.getElementById('menu-container');
             if (menuCont) menuCont.style.display = 'none';
             
-            // 2. Mandamos a llamar y encendemos la sección HTML de arriba
             const responsesWindow = document.getElementById('responses-window');
             if (!responsesWindow) {
-                alert("Error técnico: El contenedor 'responses-window' no existe en el HTML.");
+                alert("Error técnico: El contenedor 'responses-window' no existe.");
                 return;
             }
             responsesWindow.style.display = 'block';
 
-            // Restablecemos el mensaje de cargando dentro del contenedor de clones
             const contenedorClones = document.getElementById('contenedor-clones-empleados');
             if (contenedorClones) {
                 contenedorClones.innerHTML = '<p style="text-align:center; padding: 20px;">Cargando métricas del personal...</p>';
             }
 
-            // 3. Hacemos la petición a la API simplificada de tu server.js
             fetch('/api/admin-surveys')
                 .then(response => {
                     if (!response.ok) throw new Error('Error en el servidor');
@@ -1201,9 +1195,9 @@ function accessResponses() {
                         return;
                     }
 
-                    contenedorClones.innerHTML = ''; // Limpiamos el mensaje de "Cargando..."
+                    contenedorClones.innerHTML = ''; 
 
-                    // 4. Clonamos y dibujamos dinámicamente un bloque por cada empleado encontrado
+                    // Dibujamos un único contenedor agrupado por cada empleado
                     data.forEach(item => {
                         const bloqueClonado = document.createElement('div');
                         bloqueClonado.className = 'community-counter-box';
@@ -1211,26 +1205,27 @@ function accessResponses() {
                         bloqueClonado.style.padding = '20px';
                         bloqueClonado.style.backgroundColor = 'rgba(255,255,255,0.05)';
                         
+                        // Vinculamos de forma exacta los nombres en minúsculas de la consulta SQL
                         bloqueClonado.innerHTML = `
-                            <h3 style="margin-top:0; color: var(--accent-admin); font-size: 1.3rem;">
+                            <h3 style="margin-top:0; color: var(--accent-admin); font-size: 1.3rem; text-transform: uppercase;">
                                 <i class="fa-solid fa-user-doctor"></i> Personal: ${item.assistant}
                             </h3>
                             <div class="counter-grid" style="margin-top: 15px;">
                                 <div class="counter-item">
-                                    <span class="counter-number count-tabaco" style="font-size: 2rem;">${item.countTabaco}</span>
+                                    <span class="counter-number count-tabaco" style="font-size: 2rem;">${item.tabaco || 0}</span>
                                     <span class="counter-label">Tabaquismo</span>
                                 </div>
                                 <div class="counter-item">
-                                    <span class="counter-number count-alcohol" style="font-size: 2rem;">${item.countAlcohol}</span>
+                                    <span class="counter-number count-alcohol" style="font-size: 2rem;">${item.alcohol || 0}</span>
                                     <span class="counter-label">Alcoholismo</span>
                                 </div>
                                 <div class="counter-item">
-                                    <span class="counter-number count-adicciones" style="font-size: 2rem;">${item.countAdicciones}</span>
+                                    <span class="counter-number count-adicciones" style="font-size: 2rem;">${item.adicciones || 0}</span>
                                     <span class="counter-label">Adicciones</span>
                                 </div>
                             </div>
-                            <div style="margin-top: 15px; font-size: 0.9rem; text-align: right; color: var(--text-muted);">
-                                <strong>Total recolectado en el mes:</strong> ${item.totalEmpleado} encuestas
+                            <div style="margin-top: 15px; font-size: 0.9rem; text-align: right; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                                <strong>Total acumulado en el mes:</strong> ${item.total || 0} encuestas
                             </div>
                         `;
                         contenedorClones.appendChild(bloqueClonado);

@@ -208,19 +208,40 @@ app.get('/api/stats', (req, res) => {
 
 
 
-// RUTA API NUEVA: Obtener el historial completo de encuestas para el administrador
+// RUTA API GENERAL: Agrupa contadores del mes actual agrupados estrictamente por cada asistente único
 app.get('/api/admin-surveys', (req, res) => {
-    // Trae todas las encuestas ordenadas de la más reciente a la más antigua
-    const sql = 'SELECT timestamp, keyCategory, diagnostic, assistant FROM survey_responses ORDER BY timestamp DESC';
-    
-    db.query(sql, (err, results) => {
+    const hoy = new Date();
+    const anio = hoy.getFullYear();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const periodoActual = `${anio}-${mes}`; // Ejemplo: "2026-06"
+
+    const sql = `
+        SELECT 
+            assistant,
+            COUNT(CASE WHEN LOWER(keyCategory) = 'tabaquismo' THEN 1 END) AS tabaco,
+            COUNT(CASE WHEN LOWER(keyCategory) = 'alcoholismo' THEN 1 END) AS alcohol,
+            COUNT(CASE WHEN LOWER(keyCategory) = 'adicciones' THEN 1 END) AS adicciones,
+            COUNT(id) AS total
+        FROM survey_responses
+        WHERE DATE_FORMAT(timestamp, '%Y-%m') = ? 
+          AND assistant IS NOT NULL 
+          AND assistant != ''
+        GROUP BY assistant
+        ORDER BY assistant ASC
+    `;
+
+    db.query(sql, [periodoActual], (err, results) => {
         if (err) {
-            console.error('Error al consultar historial de encuestas:', err);
-            return res.status(500).json({ message: 'Error interno al obtener los datos.' });
+            console.error('Error al consultar métricas por asistente:', err);
+            return res.status(500).json({ message: 'Error interno del servidor.' });
         }
         res.status(200).json(results);
     });
 });
+
+
+
+
 
 
 
