@@ -631,7 +631,7 @@ table td:last-child {
 
     <!-- Cambia este número manualmente cada vez que vayas a actualizar Git -->
     <div style="font-size: 0.9em; color: #ff9800; font-weight: bold; margin-top: 5px;">
-        v1.0.0
+        v2.0.0
     </div>
         </header>
 
@@ -1155,44 +1155,40 @@ async function saveMonthlyGoal(e) {
 
 
 // Asegúrate de que esta variable esté declarada arriba en tu código
-const ADMIN_PASSWORD = "ViperMístico";
-
+// Forzamos la declaración limpia de la función
 function accessResponses() {
-    // 1. Solicita la contraseña al usuario mediante una ventana emergente nativa
-    const inputPassword = prompt("Por favor, introduce la contraseña de Administrador:");
-    
-    // 2. Valida si el usuario canceló o dejó en blanco
-    if (inputPassword === null) {
-        return; // No hace nada si cancela
-    }
-    
-    // 3. Compara la contraseña escrita con tu variable fija
-    if (inputPassword === ADMIN_PASSWORD) {
-        // Oculta todas las secciones (puedes añadir aquí las IDs de tus otras ventanas si es necesario)
-        // Por ejemplo, si tienes un "home-window" o "main-panel", ocúltalo aquí:
-        const mainHeader = document.getElementById("main-header");
+    try {
+        console.log("Botón presionado correctamente");
         
-        // Muestra la ventana de respuestas
-        const responsesWindow = document.getElementById("responses-window");
-        if (responsesWindow) {
-            responsesWindow.style.display = "block";
+        // 1. Pedir contraseña
+        var inputPassword = prompt("Por favor, introduce la contraseña de Administrador:");
+        
+        if (inputPassword === null) return;
+
+        // 2. Validar con la contraseña fija
+        if (inputPassword === "ViperMístico") {
+            var responsesWindow = document.getElementById("responses-window");
+            if (responsesWindow) {
+                responsesWindow.style.display = "block";
+                console.log("Ventana mostrada con éxito");
+            } else {
+                alert("Error: El contenedor 'responses-window' no existe en el HTML.");
+            }
         } else {
-            alert("Error: No se encontró el ID 'responses-window' en el HTML.");
+            alert("Contraseña incorrecta. Acceso denegado.");
         }
-    } else {
-        // Alerta si la contraseña es incorrecta
-        alert("Contraseña incorrecta. Acceso denegado.");
+    } catch (error) {
+        alert("Ocurrió un error en el código: " + error.message);
     }
 }
 
 function goHome() {
-    // Función básica para regresar: oculta el panel y restablece la vista inicial
-    const responsesWindow = document.getElementById("responses-window");
+    var responsesWindow = document.getElementById("responses-window");
     if (responsesWindow) {
         responsesWindow.style.display = "none";
     }
-    // Si tienes un panel principal, aquí lo vuelves a mostrar con style.display = "block";
 }
+
 
 
 
