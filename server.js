@@ -147,16 +147,20 @@ app.post('/api/goals', (req, res) => {
     });
 });
 
-// RUTA API: Guardar una nueva respuesta de encuesta con diagnóstico y asistente
+// RUTA API: Guardar una nueva respuesta de encuesta con diagnóstico, asistente, edad y sexo
 app.post('/api/surveys', (req, res) => {
-    const { keyCategory, diagnostic, assistant } = req.body;
+    const { keyCategory, diagnostic, assistant, age, gender } = req.body;
 
     if (!keyCategory || !['tabaquismo', 'alcoholismo', 'adicciones'].includes(keyCategory)) {
         return res.status(400).json({ message: 'Categoría de encuesta no válida.' });
     }
 
-    const sql = 'INSERT INTO survey_responses (keyCategory, diagnostic, assistant) VALUES (?, ?, ?)';
-    db.query(sql, [keyCategory, diagnostic, assistant], (err, result) => {
+    const sql = `
+        INSERT INTO survey_responses (keyCategory, diagnostic, assistant, age, gender) 
+        VALUES (?, ?, ?, ?, ?)
+    `;
+    
+    db.query(sql, [keyCategory, diagnostic, assistant, age || null, gender || null], (err, result) => {
         if (err) {
             console.error('Error al insertar encuesta:', err);
             return res.status(500).json({ message: 'Error interno al guardar la encuesta.' });
@@ -164,6 +168,8 @@ app.post('/api/surveys', (req, res) => {
         res.status(201).json({ message: 'Encuesta registrada con éxito.' });
     });
 });
+
+
 
 // RUTA API: Obtener estadísticas y contadores unificados
 app.get('/api/stats', (req, res) => {
