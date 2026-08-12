@@ -286,31 +286,46 @@ app.post('/api/validate-rfc', (req, res) => {
 
 
 
-// RUTA PARA GENERAR Y DESCARGAR EL REPORTE MENSUAL EN EXCEL (VERSIÓN MEJORADA)
+// RUTA PARA GENERAR Y DESCARGAR EL REPORTE MENSUAL EN EXCEL CON MES EN EL ENCABEZADO
 app.get('/api/reports/monthly-excel', async (req, res) => {
     try {
         const { year, month } = req.query;
 
-        // 1. Consulta SQL compatible
+        // Determinar el nombre del mes y año para mostrar en el reporte
+        const monthNames = [
+            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+        ];
+
+        let periodText = '';
+        if (year && month) {
+            const mIndex = parseInt(month, 10) - 1;
+            const mName = monthNames[mIndex] || month;
+            periodText = `${mName.toUpperCase()} ${year}`;
+        } else {
+            // Si no se envió mes/año, tomar el mes y año actual
+            const now = new Date();
+            periodText = `${monthNames[now.getMonth()].toUpperCase()} ${now.getFullYear()}`;
+        }
+
+        // 1. Consulta SQL
         let sql = `SELECT keyCategory, gender, age, diagnostic FROM survey_responses WHERE 1=1`;
         const params = [];
 
         if (year && month) {
-            // Ajusta 'createdAt' si el campo de fecha en tu tabla se llama diferente
             sql += ` AND YEAR(createdAt) = ? AND MONTH(createdAt) = ?`;
             params.push(year, month);
         }
 
-        // Ejecutar la consulta manejando posibles variaciones de la librería mysql2
+        // Ejecución de la consulta SQL
         let rows;
         if (typeof db.promise === 'function') {
             const [results] = await db.promise().query(sql, params);
             rows = results;
-        } else if (db.query.constructor.name === 'AsyncFunction') {
+        } else if (db.query && db.query.constructor.name === 'AsyncFunction') {
             const [results] = await db.query(sql, params);
             rows = results;
         } else {
-            // Si es con callback estándar envuelto en promesa
             rows = await new Promise((resolve, reject) => {
                 db.query(sql, params, (err, results) => {
                     if (err) reject(err);
@@ -339,7 +354,7 @@ app.get('/api/reports/monthly-excel', async (req, res) => {
         const genders = ['Femenino', 'Masculino'];
         const diagnostics = ['Bajo', 'Moderado', 'Sustancial', 'Severo'];
 
-        // 3. Estruturar la matriz
+        // 3. Estructurar la matriz de conteo
         const dataMap = {};
         categories.forEach(cat => {
             dataMap[cat] = {};
@@ -378,12 +393,23 @@ app.get('/api/reports/monthly-excel', async (req, res) => {
             const worksheet = workbook.addWorksheet(catName);
             worksheet.views = [{ showGridLines: true }];
 
+            // --- ENCABEZADO DEL MES Y AÑO EN LA PARTE SUPERIOR DE CADA PESTAÑA ---
+            const mainHeaderRow = worksheet.addRow([`REPORTE MENSUAL DE SALUD MENTAL - ${catName.toUpperCase()}`]);
+            mainHeaderRow.font = { bold: true, size: 14, color: { argb: '1B5E20' } };
+            worksheet.mergeCells(`A${mainHeaderRow.number}:E${mainHeaderRow.number}`);
+            mainHeaderRow.getCell(1).alignment = { horizontal: 'center' };
+
+            const monthHeaderRow = worksheet.addRow([`PERIODO / MES: ${periodText}`]);
+            monthHeaderRow.font = { bold: true, size: 11, color: { argb: '333333' } };
+            worksheet.mergeCells(`A${monthHeaderRow.number}:E${monthHeaderRow.number}`);
+            monthHeaderRow.getCell(1).alignment = { horizontal: 'center' };
+
             genders.forEach(gender => {
                 const genderTitle = gender === 'Femenino' ? 'MUJERES' : 'HOMBRES';
 
-                worksheet.addRow([]);
+                worksheet.addRow([]); // Espacio en blanco
                 const titleRow = worksheet.addRow([`${catName.toUpperCase()} - ${genderTitle}`]);
-                titleRow.font = { bold: true, size: 13, color: { argb: 'FFFFFF' } };
+                titleRow.font = { bold: true, size: 12, color: { argb: 'FFFFFF' } };
                 titleRow.getCell(1).fill = {
                     type: 'pattern',
                     pattern: 'solid',
@@ -423,19 +449,18 @@ app.get('/api/reports/monthly-excel', async (req, res) => {
             worksheet.columns.forEach(column => { column.width = 18; });
         });
 
-        // 6. Enviar archivo
+        // 6. Enviar archivo Excel
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename=Reporte_Salud_Mental.xlsx');
+        res.setHeader('Content-Disposition', `attachment; filename=Reporte_Salud_Mental_${periodText.replace(/\s+/g, '_')}.xlsx`);
 
         await workbook.xlsx.write(res);
         res.end();
 
     } catch (error) {
-        console.error('Error detallado al generar el reporte Excel:', error);
+        console.error('Error al generar el reporte Excel:', error);
         res.status(500).json({ message: 'Error interno al generar el archivo Excel.', errorDetail: error.message });
     }
 });
-
 
 
 
