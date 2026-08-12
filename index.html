@@ -804,22 +804,40 @@ table td:last-child {
 
 
 
-<!-- SECCIÓN DE RESPUESTAS SEPARADA (Arriba de tus scripts) -->
+
+
 <div class="dynamic-section" id="responses-window" style="display: none;">
+
+    <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h4 style="margin: 0; font-size: 1rem; color: #fff;">
+                <i class="fa-solid fa-file-invoice" style="color: #4CAF50; margin-right: 8px;"></i>
+                Reporte Consolidado
+            </h4>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">
+                Genera el documento Excel segmentado por adicción, sexo y grupos de edad.
+            </span>
+        </div>
+
+        <button onclick="downloadMonthlyExcelReport()" class="option-btn" style="background-color: #2e7d32; color: white; padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: background 0.3s;">
+            <i class="fa-solid fa-file-excel" style="font-size: 1.1rem;"></i> Descargar Reporte Mensual (Excel)
+        </button>
+    </div>
+
     <div class="section-header">
         <h2><i class="fa-solid fa-users-viewfinder"></i> Rendimiento Mensual por Personal</h2>
         <button class="btn-back" onclick="goHome()"><i class="fa-solid fa-xmark"></i> Volver</button>
     </div>
+    
     <p style="color: var(--text-muted); margin-bottom: 25px; font-size: 0.95rem;">
         Monitoreo de encuestas recolectadas en el mes en curso agrupadas por empleado.
     </p>
     
-    <!-- Aquí es donde la función de JavaScript inyectará exclusivamente los bloques clonados -->
     <div id="contenedor-clones-empleados" style="display: flex; flex-direction: column; gap: 30px;">
-        <!-- El estado de carga inicial -->
         <p style="text-align:center; padding: 20px;">Cargando métricas del personal...</p>
     </div>
 </div>
+
 
 
 
@@ -1961,7 +1979,12 @@ function renderResponsesTable() {
 
 
 
-
+// Función para descargar el reporte Excel consolidado
+function downloadMonthlyExcelReport() {
+    // Si deseas filtrar por un mes/año específico en el futuro puedes concatenar ?year=2026&month=8
+    const url = `${BASE_URL}/api/reports/monthly-excel`;
+    window.location.href = url; // Dispara la descarga del archivo en el navegador
+}
 
 
 

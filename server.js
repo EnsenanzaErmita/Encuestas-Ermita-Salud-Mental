@@ -2,6 +2,7 @@ const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
 const path = require('path'); 
+const ExcelJS = require('exceljs');
 
 const app = express();
 
@@ -274,6 +275,177 @@ app.post('/api/validate-rfc', (req, res) => {
         }
     });
 });
+
+
+
+
+
+
+
+
+
+
+
+// RUTA PARA GENERAR Y DESCARGAR EL REPORTE MENSUAL EN EXCEL
+app.get('/api/reports/monthly-excel', async (req, res) => {
+    try {
+        const { year, month } = req.query; // Filtro opcional: ?year=2026&month=8
+
+        let query = `
+            SELECT keyCategory, gender, age, diagnostic, createdAt 
+            FROM survey_responses 
+            WHERE age IS NOT NULL AND gender IS NOT NULL AND diagnostic IS NOT NULL
+        `;
+        const params = [];
+
+        if (year && month) {
+            query += ` AND YEAR(createdAt) = ? AND MONTH(createdAt) = ?`;
+            params.push(year, month);
+        }
+
+        const [rows] = await db.query(query, params);
+
+        // Rangos de edad especificados
+        const ageRanges = [
+            '15-19', '20-24', '25-29', '30-34', '35-39', 
+            '40-44', '45-49', '50-54', '55-59', '60-64', 
+            '65-69', '70-74', '75 y Más'
+        ];
+
+        // Función para clasificar la edad dentro de su rango
+        function getAgeRangeLabel(age) {
+            if (age < 15) return null;
+            if (age >= 75) return '75 y Más';
+            const start = Math.floor(age / 5) * 5;
+            const end = start + 4;
+            return `${start}-${end}`;
+        }
+
+        const categories = ['tabaquismo', 'alcoholismo', 'adicciones'];
+        const genders = ['Femenino', 'Masculino'];
+        const diagnostics = ['Bajo', 'Moderado', 'Sustancial', 'Severo'];
+
+        // Inicializar mapa de conteo
+        const dataMap = {};
+        categories.forEach(cat => {
+            dataMap[cat] = {};
+            genders.forEach(g => {
+                dataMap[cat][g] = {};
+                ageRanges.forEach(range => {
+                    dataMap[cat][g][range] = {
+                        'Bajo': 0,
+                        'Moderado': 0,
+                        'Sustancial': 0,
+                        'Severo': 0
+                    };
+                });
+            });
+        });
+
+        // Contabilizar respuestas
+        rows.forEach(row => {
+            const cat = row.keyCategory ? row.keyCategory.toLowerCase() : null;
+            const genderRaw = row.gender ? row.gender.trim() : '';
+            
+            let gender = null;
+            if (/femenino|mujer|f/i.test(genderRaw)) gender = 'Femenino';
+            else if (/masculino|hombre|m/i.test(genderRaw)) gender = 'Masculino';
+
+            const range = getAgeRangeLabel(parseInt(row.age, 10));
+            const diag = row.diagnostic ? row.diagnostic.trim() : null;
+
+            if (dataMap[cat] && gender && dataMap[cat][gender] && range && diagnostics.includes(diag)) {
+                dataMap[cat][gender][range][diag]++;
+            }
+        });
+
+        // Crear libro Excel
+        const workbook = new ExcelJS.Workbook();
+
+        categories.forEach(cat => {
+            const catName = cat.charAt(0).toUpperCase() + cat.slice(1);
+            const worksheet = workbook.addWorksheet(catName);
+
+            worksheet.views = [{ showGridLines: true }];
+
+            genders.forEach(gender => {
+                const genderTitle = gender === 'Femenino' ? 'MUJERES' : 'HOMBRES';
+
+                // Título del bloque de sexo
+                worksheet.addRow([]);
+                const titleRow = worksheet.addRow([`${catName.toUpperCase()} - ${genderTitle}`]);
+                titleRow.font = { bold: true, size: 13, color: { argb: 'FFFFFF' } };
+                titleRow.getCell(1).fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: gender === 'Femenino' ? '880E4F' : '1565C0' }
+                };
+                worksheet.mergeCells(`A${titleRow.number}:E${titleRow.number}`);
+
+                // Encabezados de columnas
+                const headerRow = worksheet.addRow(['Rango de Edad', 'Bajo', 'Moderado', 'Sustancial', 'Severo']);
+                headerRow.font = { bold: true };
+                headerRow.eachCell((cell) => {
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'E0E0E0' }
+                    };
+                    cell.alignment = { horizontal: 'center' };
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+
+                // Filas por rango de edad
+                ageRanges.forEach(range => {
+                    const counts = dataMap[cat][gender][range];
+                    const row = worksheet.addRow([
+                        range,
+                        counts['Bajo'],
+                        counts['Moderado'],
+                        counts['Sustancial'],
+                        counts['Severo']
+                    ]);
+
+                    row.getCell(1).alignment = { horizontal: 'center' };
+                    for (let i = 2; i <= 5; i++) {
+                        row.getCell(i).alignment = { horizontal: 'right' };
+                    }
+
+                    row.eachCell((cell) => {
+                        cell.border = {
+                            top: { style: 'thin' },
+                            left: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            right: { style: 'thin' }
+                        };
+                    });
+                });
+            });
+
+            worksheet.columns.forEach(column => {
+                column.width = 18;
+            });
+        });
+
+        // Configurar descarga del archivo
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=Reporte_Salud_Mental.xlsx`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+
+    } catch (error) {
+        console.error('Error al generar el reporte Excel:', error);
+        res.status(500).json({ message: 'Error interno al generar el archivo Excel.' });
+    }
+});
+
+
 
 
 
