@@ -1979,12 +1979,34 @@ function renderResponsesTable() {
 
 
 
-// Función para descargar el reporte Excel consolidado
-function downloadMonthlyExcelReport() {
-    // Si deseas filtrar por un mes/año específico en el futuro puedes concatenar ?year=2026&month=8
-    const url = `${BASE_URL}/api/reports/monthly-excel`;
-    window.location.href = url; // Dispara la descarga del archivo en el navegador
+async function downloadMonthlyExcelReport() {
+    try {
+        const response = await fetch(`${BASE_URL}/api/reports/monthly-excel`);
+        
+        if (!response.ok) {
+            const errData = await response.json();
+            alert(`Error al descargar el reporte: ${errData.errorDetail || errData.message}`);
+            return;
+        }
+
+        // Convertir la respuesta en archivo y descargarlo
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = "Reporte_Salud_Mental.xlsx";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+
+    } catch (error) {
+        console.error("Error en la descarga:", error);
+        alert("Ocurrió un problema de conexión al intentar descargar el reporte.");
+    }
 }
+
+
 
 
 

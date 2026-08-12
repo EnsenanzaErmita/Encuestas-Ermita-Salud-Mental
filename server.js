@@ -286,37 +286,51 @@ app.post('/api/validate-rfc', (req, res) => {
 
 
 
-// RUTA PARA GENERAR Y DESCARGAR EL REPORTE MENSUAL EN EXCEL
+// RUTA PARA GENERAR Y DESCARGAR EL REPORTE MENSUAL EN EXCEL (VERSIÓN MEJORADA)
 app.get('/api/reports/monthly-excel', async (req, res) => {
     try {
-        const { year, month } = req.query; // Filtro opcional: ?year=2026&month=8
+        const { year, month } = req.query;
 
-        let query = `
-            SELECT keyCategory, gender, age, diagnostic, createdAt 
-            FROM survey_responses 
-            WHERE age IS NOT NULL AND gender IS NOT NULL AND diagnostic IS NOT NULL
-        `;
+        // 1. Consulta SQL compatible
+        let sql = `SELECT keyCategory, gender, age, diagnostic FROM survey_responses WHERE 1=1`;
         const params = [];
 
         if (year && month) {
-            query += ` AND YEAR(createdAt) = ? AND MONTH(createdAt) = ?`;
+            // Ajusta 'createdAt' si el campo de fecha en tu tabla se llama diferente
+            sql += ` AND YEAR(createdAt) = ? AND MONTH(createdAt) = ?`;
             params.push(year, month);
         }
 
-        const [rows] = await db.query(query, params);
+        // Ejecutar la consulta manejando posibles variaciones de la librería mysql2
+        let rows;
+        if (typeof db.promise === 'function') {
+            const [results] = await db.promise().query(sql, params);
+            rows = results;
+        } else if (db.query.constructor.name === 'AsyncFunction') {
+            const [results] = await db.query(sql, params);
+            rows = results;
+        } else {
+            // Si es con callback estándar envuelto en promesa
+            rows = await new Promise((resolve, reject) => {
+                db.query(sql, params, (err, results) => {
+                    if (err) reject(err);
+                    else resolve(results);
+                });
+            });
+        }
 
-        // Rangos de edad especificados
+        // 2. Definir rangos de edad
         const ageRanges = [
             '15-19', '20-24', '25-29', '30-34', '35-39', 
             '40-44', '45-49', '50-54', '55-59', '60-64', 
             '65-69', '70-74', '75 y Más'
         ];
 
-        // Función para clasificar la edad dentro de su rango
         function getAgeRangeLabel(age) {
-            if (age < 15) return null;
-            if (age >= 75) return '75 y Más';
-            const start = Math.floor(age / 5) * 5;
+            const numAge = parseInt(age, 10);
+            if (isNaN(numAge) || numAge < 15) return null;
+            if (numAge >= 75) return '75 y Más';
+            const start = Math.floor(numAge / 5) * 5;
             const end = start + 4;
             return `${start}-${end}`;
         }
@@ -325,53 +339,48 @@ app.get('/api/reports/monthly-excel', async (req, res) => {
         const genders = ['Femenino', 'Masculino'];
         const diagnostics = ['Bajo', 'Moderado', 'Sustancial', 'Severo'];
 
-        // Inicializar mapa de conteo
+        // 3. Estruturar la matriz
         const dataMap = {};
         categories.forEach(cat => {
             dataMap[cat] = {};
             genders.forEach(g => {
                 dataMap[cat][g] = {};
                 ageRanges.forEach(range => {
-                    dataMap[cat][g][range] = {
-                        'Bajo': 0,
-                        'Moderado': 0,
-                        'Sustancial': 0,
-                        'Severo': 0
-                    };
+                    dataMap[cat][g][range] = { 'Bajo': 0, 'Moderado': 0, 'Sustancial': 0, 'Severo': 0 };
                 });
             });
         });
 
-        // Contabilizar respuestas
-        rows.forEach(row => {
-            const cat = row.keyCategory ? row.keyCategory.toLowerCase() : null;
-            const genderRaw = row.gender ? row.gender.trim() : '';
-            
-            let gender = null;
-            if (/femenino|mujer|f/i.test(genderRaw)) gender = 'Femenino';
-            else if (/masculino|hombre|m/i.test(genderRaw)) gender = 'Masculino';
+        // 4. Llenar los datos
+        if (Array.isArray(rows)) {
+            rows.forEach(row => {
+                const cat = row.keyCategory ? row.keyCategory.toString().toLowerCase().trim() : null;
+                const genderRaw = row.gender ? row.gender.toString().trim() : '';
+                
+                let gender = null;
+                if (/femenino|mujer|f/i.test(genderRaw)) gender = 'Femenino';
+                else if (/masculino|hombre|m/i.test(genderRaw)) gender = 'Masculino';
 
-            const range = getAgeRangeLabel(parseInt(row.age, 10));
-            const diag = row.diagnostic ? row.diagnostic.trim() : null;
+                const range = getAgeRangeLabel(row.age);
+                const diag = row.diagnostic ? row.diagnostic.toString().trim() : null;
 
-            if (dataMap[cat] && gender && dataMap[cat][gender] && range && diagnostics.includes(diag)) {
-                dataMap[cat][gender][range][diag]++;
-            }
-        });
+                if (dataMap[cat] && gender && dataMap[cat][gender] && range && diagnostics.includes(diag)) {
+                    dataMap[cat][gender][range][diag]++;
+                }
+            });
+        }
 
-        // Crear libro Excel
+        // 5. Crear libro Excel
         const workbook = new ExcelJS.Workbook();
 
         categories.forEach(cat => {
             const catName = cat.charAt(0).toUpperCase() + cat.slice(1);
             const worksheet = workbook.addWorksheet(catName);
-
             worksheet.views = [{ showGridLines: true }];
 
             genders.forEach(gender => {
                 const genderTitle = gender === 'Femenino' ? 'MUJERES' : 'HOMBRES';
 
-                // Título del bloque de sexo
                 worksheet.addRow([]);
                 const titleRow = worksheet.addRow([`${catName.toUpperCase()} - ${genderTitle}`]);
                 titleRow.font = { bold: true, size: 13, color: { argb: 'FFFFFF' } };
@@ -382,25 +391,14 @@ app.get('/api/reports/monthly-excel', async (req, res) => {
                 };
                 worksheet.mergeCells(`A${titleRow.number}:E${titleRow.number}`);
 
-                // Encabezados de columnas
                 const headerRow = worksheet.addRow(['Rango de Edad', 'Bajo', 'Moderado', 'Sustancial', 'Severo']);
                 headerRow.font = { bold: true };
                 headerRow.eachCell((cell) => {
-                    cell.fill = {
-                        type: 'pattern',
-                        pattern: 'solid',
-                        fgColor: { argb: 'E0E0E0' }
-                    };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E0E0E0' } };
                     cell.alignment = { horizontal: 'center' };
-                    cell.border = {
-                        top: { style: 'thin' },
-                        left: { style: 'thin' },
-                        bottom: { style: 'thin' },
-                        right: { style: 'thin' }
-                    };
+                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                 });
 
-                // Filas por rango de edad
                 ageRanges.forEach(range => {
                     const counts = dataMap[cat][gender][range];
                     const row = worksheet.addRow([
@@ -417,34 +415,26 @@ app.get('/api/reports/monthly-excel', async (req, res) => {
                     }
 
                     row.eachCell((cell) => {
-                        cell.border = {
-                            top: { style: 'thin' },
-                            left: { style: 'thin' },
-                            bottom: { style: 'thin' },
-                            right: { style: 'thin' }
-                        };
+                        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                     });
                 });
             });
 
-            worksheet.columns.forEach(column => {
-                column.width = 18;
-            });
+            worksheet.columns.forEach(column => { column.width = 18; });
         });
 
-        // Configurar descarga del archivo
+        // 6. Enviar archivo
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', `attachment; filename=Reporte_Salud_Mental.xlsx`);
+        res.setHeader('Content-Disposition', 'attachment; filename=Reporte_Salud_Mental.xlsx');
 
         await workbook.xlsx.write(res);
         res.end();
 
     } catch (error) {
-        console.error('Error al generar el reporte Excel:', error);
-        res.status(500).json({ message: 'Error interno al generar el archivo Excel.' });
+        console.error('Error detallado al generar el reporte Excel:', error);
+        res.status(500).json({ message: 'Error interno al generar el archivo Excel.', errorDetail: error.message });
     }
 });
-
 
 
 
