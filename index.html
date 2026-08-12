@@ -1706,26 +1706,60 @@ async function saveAndShowResults() {
     // El asistente está en la última posición guardada
     const assistantPerson = currentAnswers[currentAnswers.length - 1] || 'No especificado';
 
-    // 2. CÁLCULO DEL DIAGNÓSTICO
+
+
+// 2. CÁLCULO DEL DIAGNÓSTICO
     // Filtramos únicamente las respuestas que pertenecen a la encuesta (excluyendo edad, sexo y asistente)
     const testOnlyAnswers = currentAnswers.slice(2, currentAnswers.length - 1);
     
     let diagnostic = "Sin diagnóstico";
 
     if (currentCategory === 'tabaquismo') {
-        // En Fagerstrom sumamos los valores numéricos/puntos de cada respuesta
-        // Si selectOption guardó índices o textos, asegúrate de calcular el puntaje según tu lógica previa:
+        // En Tabaquismo (Cuestionario Fagerström, escala 0 a 10 puntos)
         const score = testOnlyAnswers.reduce((acc, val) => acc + (parseInt(val, 10) || 0), 0);
-        if (score <= 2) diagnostic = "Dependencia muy baja";
-        else if (score <= 4) diagnostic = "Dependencia baja";
-        else if (score === 5) diagnostic = "Dependencia moderada";
-        else if (score <= 7) diagnostic = "Dependencia alta";
-        else diagnostic = "Dependencia muy alta";
+        
+        if (score <= 2) {
+            diagnostic = "Bajo";
+        } else if (score <= 5) {
+            diagnostic = "Moderado";
+        } else if (score <= 7) {
+            diagnostic = "Sustancial";
+        } else {
+            diagnostic = "Severo";
+        }
+
     } else if (currentCategory === 'alcoholismo') {
-        diagnostic = "Evaluación de alcoholismo completada";
+        // Para Alcoholismo (ejemplo sumando los índices/puntos de las respuestas)
+        const score = testOnlyAnswers.reduce((acc, val) => acc + (parseInt(val, 10) || 0), 0);
+        
+        if (score <= 2) {
+            diagnostic = "Bajo";
+        } else if (score <= 5) {
+            diagnostic = "Moderado";
+        } else if (score <= 8) {
+            diagnostic = "Sustancial";
+        } else {
+            diagnostic = "Severo";
+        }
+
     } else if (currentCategory === 'adicciones') {
-        diagnostic = "Evaluación de adicciones completada";
+        // Para Adicciones (ejemplo sumando los índices/puntos de las respuestas)
+        const score = testOnlyAnswers.reduce((acc, val) => acc + (parseInt(val, 10) || 0), 0);
+        
+        if (score <= 2) {
+            diagnostic = "Bajo";
+        } else if (score <= 4) {
+            diagnostic = "Moderado";
+        } else if (score <= 6) {
+            diagnostic = "Sustancial";
+        } else {
+            diagnostic = "Severo";
+        }
     }
+
+
+
+
 
     // 3. MOSTRAR PANTALLA DE RESULTADOS EN EL FRONTEND
     const content = document.getElementById('test-content');
